@@ -67,12 +67,21 @@ function renderSnapshot() {
   $('raw-json').textContent = JSON.stringify(snapshot, null, 2);
   renderFirewall(); renderInterfaces(); renderRoutes(); renderGraph();
 }
+let activeDiagnostic = null;
+
+async function readJson(response) {
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+  if (!response.ok) throw new Error(data?.detail || `HTTP ${response.status}`);
+  return data ?? {};
+}
+
 async function refresh() {
   $('refresh').disabled = true; $('refresh').textContent = 'Collecte…';
   try {
-    const response = await fetch('/api/graph', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const result = await response.json(); snapshot = result.snapshot; graph = result.graph; renderSnapshot();
+    const result = await readJson(await fetch('/api/graph', { cache: 'no-store' }));
+    snapshot = result.snapshot; graph = result.graph; renderSnapshot();
   } catch (error) { $('errors').textContent = String(error); }
   finally { $('refresh').disabled = false; $('refresh').textContent = 'Actualiser'; }
 }
@@ -89,16 +98,23 @@ refresh();
 
 
 async function postDiagnostic(path, payload, outputId, button) {
-  const output = $(outputId); button.disabled = true; output.textContent = 'Diagnostic en cours…';
+  const output = $(outputId);
+  if (activeDiagnostic) activeDiagnostic.abort();
+  const controller = new AbortController();
+  activeDiagnostic = controller;
+  button.disabled = true; output.textContent = 'Diagnostic en cours…';
   try {
-    const response = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+    const response = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload), signal: controller.signal});
+    const data = await readJson(response);
     output.textContent = data.output || data.interpretation || data.error || JSON.stringify(data, null, 2);
     if (data.route?.output) output.textContent += `\n\nRoute locale sélectionnée :\n${data.route.output}`;
     if (data.interpretation) output.textContent += `\n\n${data.interpretation}`;
-  } catch (error) { output.textContent = `Erreur : ${error.message}`; }
-  finally { button.disabled = false; }
+  } catch (error) {
+    output.textContent = error.name === 'AbortError' ? 'Diagnostic annulé.' : `Erreur : ${error.message}`;
+  } finally {
+    button.disabled = false;
+    if (activeDiagnostic === controller) activeDiagnostic = null;
+  }
 }
 $('run-ping').addEventListener('click', () => postDiagnostic('/api/tools/ping', {target:$('path-target').value, count:Number($('ping-count').value)}, 'path-result', $('run-ping')));
 $('run-trace').addEventListener('click', () => postDiagnostic('/api/tools/trace', {target:$('path-target').value, max_hops:Number($('trace-hops').value)}, 'path-result', $('run-trace')));

@@ -46,7 +46,7 @@ def run_ping(target: str, count: int = 4) -> dict:
     if not binary:
         return {"ok": False, "error": "La commande ping n'est pas installée."}
     result = _run([binary, "-n", "-c", str(count), "-W", "2", "--", target], timeout=count * 3 + 3)
-    return {"target": target, "count": count, "return_code": result.returncode,
+    return {"ok": result.returncode == 0, "target": target, "count": count, "return_code": result.returncode,
             "reachable": result.returncode == 0, "route": route_lookup(target),
             "output": (result.stdout + result.stderr).strip()}
 
@@ -62,7 +62,7 @@ def run_trace(target: str, max_hops: int = 20) -> dict:
     else:
         return {"ok": False, "target": target,
                 "error": "Aucun outil disponible. Installe tracepath (iputils-tracepath) ou traceroute."}
-    result = _run(command, timeout=max_hops + 5)
+    result = _run(command, timeout=max_hops * 2 + 5)
     return {"ok": result.returncode == 0, "target": target, "tool": tool,
             "route": route_lookup(target), "return_code": result.returncode,
             "output": (result.stdout + result.stderr).strip()}
@@ -81,7 +81,7 @@ def test_tcp_port(target: str, port: int, timeout: float = 2.0) -> dict:
                     "interpretation": "Connexion TCP établie. Le chemin réseau et les règles rencontrées l'ont laissée passer."}
     except ConnectionRefusedError:
         result, explanation = "refused", "La cible a répondu par un refus TCP (RST). Le port peut être fermé ou un équipement peut rejeter la connexion."
-    except socket.timeout:
+    except TimeoutError:
         result, explanation = "timeout", "Aucune réponse dans le délai imparti. Filtrage, perte réseau ou hôte silencieux sont possibles."
     except OSError as exc:
         result, explanation = "unreachable", f"Échec réseau : {exc}"

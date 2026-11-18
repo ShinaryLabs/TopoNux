@@ -18,13 +18,7 @@ def test_graph_is_simplified_and_keeps_only_default_gateway():
     graph = build_graph(snapshot)
     ids = {node["data"]["id"] for node in graph["nodes"]}
     kinds = {node["data"]["kind"] for node in graph["nodes"]}
-    assert "host" in ids
-    assert "if:eth0" in ids
-    assert "bridge:docker0" in ids
-    assert "if:lo" not in ids
-    assert not any("veth" in node_id for node_id in ids)
-    assert not any(node_id.startswith("route:") for node_id in ids)
-    assert "gateway:ipv4:192.0.2.1:0" in ids
+    assert ids == {"host", "if:eth0", "bridge:docker0", "gateway:ipv4:192.0.2.1:0"}
     assert kinds == {"host", "interface", "bridge", "gateway"}
 
 

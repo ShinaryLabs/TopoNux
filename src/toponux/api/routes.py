@@ -1,8 +1,11 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from toponux.collectors.diagnostics import run_ping, run_trace, test_tcp_port
+from toponux.collectors.firewall import collect_firewall
 from toponux.collectors.interfaces import collect_interfaces
 from toponux.collectors.routes import collect_routes
 from toponux.collectors.rules import collect_policy_rules
-from toponux.collectors.firewall import collect_firewall
 from toponux.models.network import collect_snapshot
 from toponux.analyzers.topology import build_graph
 
@@ -25,10 +28,6 @@ def get_graph():
     return {"snapshot": snapshot, "graph": build_graph(snapshot)}
 
 # Diagnostic tools: bounded, explicit probes only. They never alter network configuration.
-from fastapi import HTTPException
-from pydantic import BaseModel, Field
-from toponux.collectors.diagnostics import run_ping, run_trace, test_tcp_port
-
 class TargetRequest(BaseModel):
     target: str = Field(min_length=1, max_length=253)
 

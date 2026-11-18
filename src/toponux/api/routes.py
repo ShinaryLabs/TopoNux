@@ -5,13 +5,13 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from toponux.analyzers.topology import build_graph
 from toponux.collectors.diagnostics import run_ping, run_trace, test_tcp_port
 from toponux.collectors.firewall import collect_firewall
 from toponux.collectors.interfaces import collect_interfaces
 from toponux.collectors.routes import collect_routes
 from toponux.collectors.rules import collect_policy_rules
 from toponux.models.network import collect_snapshot
-from toponux.analyzers.topology import build_graph
 
 router = APIRouter()
 

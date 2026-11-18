@@ -56,6 +56,16 @@ pip install -e '.[dev]'
 pytest
 ```
 
+The same checks run in CI, through `uv`:
+
+```bash
+uv sync --extra dev --locked
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+uv run pytest
+```
+
 
 ## Diagnostic tools (V0.3)
 

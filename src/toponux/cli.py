@@ -1,4 +1,5 @@
 import ipaddress
+
 import typer
 import uvicorn
 
@@ -47,6 +48,8 @@ def start(
             err=True,
         )
     if not no_browser and loopback:
-        import threading, webbrowser
+        import threading
+        import webbrowser
+
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     uvicorn.run("toponux.main:app", host=host, port=port, log_level="warning")

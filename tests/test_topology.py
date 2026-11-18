@@ -9,11 +9,14 @@ def test_graph_is_simplified_and_keeps_only_default_gateway():
             {"ifname": "docker0", "operstate": "UP", "addr_info": [{"local": "172.17.0.1", "prefixlen": 16}]},
             {"ifname": "veth123", "operstate": "UP", "master": "docker0", "addr_info": []},
         ],
-        "routes": {"ipv4": [
-            {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "table": "main"},
-            {"dst": "192.0.2.0/24", "dev": "eth0", "table": "main"},
-            {"type": "local", "dst": "127.0.0.1", "dev": "lo", "table": "local"},
-        ], "ipv6": []},
+        "routes": {
+            "ipv4": [
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "table": "main"},
+                {"dst": "192.0.2.0/24", "dev": "eth0", "table": "main"},
+                {"type": "local", "dst": "127.0.0.1", "dev": "lo", "table": "local"},
+            ],
+            "ipv6": [],
+        },
     }
     graph = build_graph(snapshot)
     ids = {node["data"]["id"] for node in graph["nodes"]}

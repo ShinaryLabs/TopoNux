@@ -33,6 +33,12 @@ sudo .venv/bin/toponux
 
 Even with elevated privileges, Toponux remains strictly read-only.
 
+By default Toponux listens on loopback only. Listening on another address requires the explicit `--allow-remote` flag, because the diagnostic tools would then be reachable from the network:
+
+```bash
+toponux --host 0.0.0.0 --allow-remote
+```
+
 ## Views
 
 - **Global view**: local machine, main IP interfaces, active virtual bridges and default gateways.

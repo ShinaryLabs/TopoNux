@@ -13,8 +13,8 @@ const graphStyle = [
   { selector: ':selected', style: { 'border-width': 3, 'border-color': '#f8fafc' } },
 ];
 
-function countRules(rules = {}) { return (rules.ipv4?.length || 0) + (rules.ipv6?.length || 0); }
-function allRoutes() { return Object.entries(snapshot.routes || {}).flatMap(([family, routes]) => routes.map(route => ({ family, ...route }))); }
+function countRules(rules = {}) { return (Array.isArray(rules.ipv4) ? rules.ipv4.length : 0) + (Array.isArray(rules.ipv6) ? rules.ipv6.length : 0); }
+function allRoutes() { return Object.entries(snapshot.routes || {}).flatMap(([family, routes]) => (Array.isArray(routes) ? routes : []).map(route => ({ family, ...route }))); }
 function interfaceAddresses(iface) { return (iface.addr_info || []).map(a => `${a.local}/${a.prefixlen}`); }
 function escapeHtml(value) { return String(value ?? '—').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function showDetails(data) {
@@ -38,17 +38,21 @@ function renderRoutes() {
   const rows = allRoutes().filter(r => JSON.stringify(r).toLowerCase().includes(filter));
   $('routes-body').innerHTML = rows.map(r => `<tr><td>${escapeHtml(r.family.toUpperCase())}</td><td><strong>${escapeHtml(r.dst || 'default')}</strong></td><td>${escapeHtml(r.gateway || '—')}</td><td>${escapeHtml(r.dev || '—')}</td><td>${escapeHtml(r.table || 'main')}</td><td>${escapeHtml([r.type, ...(r.flags || [])].filter(Boolean).join(' · ') || r.scope || '—')}</td><td>${escapeHtml(r.metric ?? '—')}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">Aucune route correspondante.</td></tr>';
   const rules = snapshot.policy_rules || {};
-  $('rules-list').innerHTML = Object.entries(rules).map(([family, items]) => `<div class="rule-family"><h3>${family.toUpperCase()}</h3>${(items || []).map(r => `<div class="rule-row"><b>Priorité ${escapeHtml(r.priority)}</b><span>source ${escapeHtml(r.src || 'all')}</span><span>table ${escapeHtml(r.table || '—')}</span></div>`).join('') || '<p>Aucune règle.</p>'}</div>`).join('');
+  $('rules-list').innerHTML = Object.entries(rules).map(([family, items]) => `<div class="rule-family"><h3>${escapeHtml(family.toUpperCase())}</h3>${(Array.isArray(items) ? items : []).map(r => `<div class="rule-row"><b>Priorité ${escapeHtml(r.priority)}</b><span>source ${escapeHtml(r.src || 'all')}</span><span>table ${escapeHtml(r.table || '—')}</span></div>`).join('') || '<p>Aucune règle.</p>'}</div>`).join('');
 }
 function renderFirewall() {
   const fw = snapshot.firewall || {};
-  const available = fw.backend && fw.backend !== 'unavailable';
+  const available = Boolean(fw.backend && fw.backend !== 'unavailable' && fw.rules != null);
   $('firewall-status').textContent = available ? fw.backend : 'Indisponible';
   $('firewall-sub').textContent = available ? 'Règles accessibles' : 'Permissions insuffisantes ou backend absent';
   $('firewall-badge').textContent = available ? fw.backend : 'Non accessible';
   $('firewall-badge').className = `status-badge ${available ? 'ok' : 'warn'}`;
-  $('firewall-message').textContent = available ? `Backend détecté : ${fw.backend}. Les règles ci-dessous sont consultables en lecture seule.` : `Toponux n'a pas pu lire le firewall. ${fw.error || fw.nft_error || 'Aucune information disponible.'}`;
-  $('firewall-raw').textContent = fw.rules ? JSON.stringify(fw.rules, null, 2) : 'Aucune règle exploitable retournée par le collecteur.';
+  let message = available
+    ? `Backend détecté : ${fw.backend}. Les règles ci-dessous sont consultables en lecture seule.`
+    : `Toponux n'a pas pu lire le firewall. ${fw.error || fw.nft_error || 'Aucune information disponible.'}`;
+  if (available && fw.nft_error) message += ` nftables indisponible (${fw.nft_error}) : repli sur iptables.`;
+  $('firewall-message').textContent = message;
+  $('firewall-raw').textContent = fw.rules != null ? JSON.stringify(fw.rules, null, 2) : 'Aucune règle exploitable retournée par le collecteur.';
 }
 function renderSnapshot() {
   const interfaces = snapshot.interfaces || [];

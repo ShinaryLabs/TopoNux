@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Toponux — Cartographie réseau</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+</head>
+<body>
+  <header>
+    <div><h1>Toponux</h1><p>Cartographie de la configuration réseau locale · Lecture seule</p></div>
+    <button id="refresh">Actualiser</button>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="metric"><span>Interfaces</span><strong id="interface-count">—</strong><small id="interface-sub">—</small></div>
+      <div class="metric"><span>Routes</span><strong id="route-count">—</strong><small>IPv4 + IPv6, toutes tables</small></div>
+      <div class="metric"><span>Règles IP</span><strong id="rule-count">—</strong><small>Règles de politique</small></div>
+      <div class="metric"><span>Firewall</span><strong id="firewall-status">—</strong><small id="firewall-sub">État de lecture</small></div>
+    </section>
+
+    <nav class="tabs" aria-label="Vues Toponux">
+      <button class="tab active" data-tab="overview">Vue globale</button>
+      <button class="tab" data-tab="interfaces">Interfaces</button>
+      <button class="tab" data-tab="routes">Routage</button>
+      <button class="tab" data-tab="firewall">Firewall</button>
+      <button class="tab" data-tab="diagnostics">Outils réseau</button>
+    </nav>
+
+    <section id="tab-overview" class="tab-content active">
+      <div class="overview-grid">
+        <section class="panel graph-panel">
+          <div class="panel-heading"><div><h2>Topologie réseau</h2><p>Vue simplifiée : machine, interfaces actives, réseaux virtuels et passerelles par défaut.</p></div><span id="timestamp"></span></div>
+          <div id="cy"></div>
+          <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / réseau virtuel</span><span><i class="dot gateway"></i>Passerelle</span></div>
+        </section>
+        <aside class="panel details"><h2>Détails</h2><p id="detail-hint">Sélectionne un élément du graphe.</p><pre id="details">Aucun élément sélectionné.</pre><h2>État de collecte</h2><pre id="errors">Aucune erreur signalée.</pre></aside>
+      </div>
+      <section class="panel notes"><h2>Lecture de la topologie</h2><p>Les routes locales, broadcast et multicast ne sont pas dessinées dans cette vue. Les interfaces veth sont regroupées sous leurs bridges. Consulte les onglets dédiés pour accéder à l'inventaire complet.</p></section>
+    </section>
+
+    <section id="tab-interfaces" class="tab-content panel table-panel">
+      <div class="table-toolbar"><div><h2>Interfaces réseau</h2><p>Inventaire complet, y compris les interfaces DOWN et les veth.</p></div><input id="interface-filter" type="search" placeholder="Filtrer les interfaces…"></div>
+      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>État</th><th>Adresses IP</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
+    </section>
+
+    <section id="tab-routes" class="tab-content panel table-panel">
+      <div class="table-toolbar"><div><h2>Tables de routage</h2><p>Routes IPv4 et IPv6, y compris les entrées locales et spéciales.</p></div><input id="route-filter" type="search" placeholder="Filtrer destination, interface, passerelle…"></div>
+      <div class="table-wrap"><table><thead><tr><th>Famille</th><th>Destination</th><th>Passerelle</th><th>Interface</th><th>Table</th><th>Type / état</th><th>Métrique</th></tr></thead><tbody id="routes-body"></tbody></table></div>
+      <h2 class="subheading">Règles de routage par politique</h2><div id="rules-list" class="rules-list"></div>
+    </section>
+
+    <section id="tab-firewall" class="tab-content panel table-panel">
+      <div class="table-toolbar"><div><h2>Firewall</h2><p>Lecture des règles existantes uniquement. Aucune modification n'est effectuée.</p></div><span id="firewall-badge" class="status-badge">—</span></div>
+      <div id="firewall-message" class="notice"></div>
+      <pre id="firewall-raw" class="code-view">Aucune donnée.</pre>
+    </section>
+
+    <section id="tab-diagnostics" class="tab-content diagnostics-grid">
+      <section class="panel tool-card">
+        <h2>Ping &amp; chemin réseau</h2><p>Outils réseau indépendants du firewall : ping et traceroute/tracepath pour observer le chemin vers une destination.</p>
+        <form id="path-form" class="tool-form"><label>Destination<input id="path-target" required maxlength="253" placeholder="1.1.1.1 ou example.org"></label><label>Paquets ping<input id="ping-count" type="number" min="1" max="10" value="4"></label><label>Sauts maximum<input id="trace-hops" type="number" min="1" max="30" value="20"></label><div class="tool-actions"><button type="button" id="run-ping">Ping</button><button type="button" id="run-trace" class="secondary">Traceroute</button></div></form>
+        <pre id="path-result" class="tool-result">Saisis une destination pour lancer un diagnostic.</pre>
+      </section>
+      <section class="panel tool-card">
+        <h2>Test de port / service</h2><p>Teste la connectivité TCP vers un service distant. Cet outil est indépendant de l’analyse des règles firewall.</p>
+        <form id="port-form" class="tool-form"><label>Destination<input id="port-target" required maxlength="253" placeholder="192.0.2.10 ou serveur.local"></label><label>Port TCP<input id="port-number" type="number" min="1" max="65535" value="443" required></label><label>Délai (secondes)<input id="port-timeout" type="number" min="0.5" max="5" step="0.5" value="2"></label><button type="submit">Tester le port</button></form>
+        <pre id="port-result" class="tool-result">Aucun test effectué.</pre>
+      </section>
+      <section class="panel tool-note"><h2>À propos des sondes réseau</h2><ul><li>Ces outils sont des sondes actives : ping, traceroute et connexion TCP émettent des paquets.</li><li>Ils ne modifient aucune adresse, route, règle firewall ou configuration système.</li><li>Un traceroute incomplet peut simplement indiquer que des routeurs ne répondent pas aux sondes.</li><li>Un test TCP réussi prouve que la connexion est possible depuis cette machine, pas quelle règle précise l'a autorisée.</li><li>Un timeout ne prouve pas à lui seul un blocage par le firewall local.</li></ul></section>
+    </section>
+
+    <section class="panel raw"><h2>Données brutes</h2><details><summary>Afficher le snapshot JSON complet</summary><pre id="raw-json"></pre></details></section>
+    <footer>Toponux · Collecte locale en lecture seule · <span id="footer-time"></span></footer>
+  </main>
+  <script src="/static/app.js"></script>
+</body></html>

@@ -1,13 +1,13 @@
 # Toponux
 
-Toponux est un outil Linux local qui cartographie la configuration réseau en **lecture seule**.
+Toponux is a local Linux tool that maps the network configuration in **read-only** mode.
 
-## Principes
+## Principles
 
-- Aucune modification de configuration réseau.
-- Aucune commande de scan, aucun paquet de test et aucune connexion vers des hôtes distants.
-- Collecte locale via des commandes de consultation (`ip -j`, `nft list ruleset`, `iptables-save`).
-- Les informations non accessibles sont signalées ; Toponux ne tente pas de contourner les permissions.
+- No network configuration is modified.
+- No scan commands, no test packets and no connections to remote hosts.
+- Local collection through query-only commands (`ip -j`, `nft list ruleset`, `iptables-save`).
+- Information that cannot be accessed is reported; Toponux does not try to bypass permissions.
 
 ## Installation
 
@@ -17,31 +17,31 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-## Lancement
+## Launch
 
 ```bash
 toponux
 ```
 
-Ouvrir http://127.0.0.1:8765 si le navigateur ne s'ouvre pas automatiquement.
+Open http://127.0.0.1:8765 if the browser does not open automatically.
 
-Pour lire les règles du firewall, lancer éventuellement Toponux avec les permissions nécessaires :
+To read firewall rules, you may launch Toponux with the required permissions:
 
 ```bash
 sudo .venv/bin/toponux
 ```
 
-Même avec des privilèges élevés, Toponux reste strictement en lecture seule.
+Even with elevated privileges, Toponux remains strictly read-only.
 
-## Vues
+## Views
 
-- **Vue globale** : machine locale, interfaces IP principales, bridges virtuels actifs et passerelles par défaut.
-- **Interfaces** : inventaire complet, y compris loopback, veth et interfaces DOWN.
-- **Routage** : toutes les routes IPv4/IPv6 et les règles de routage par politique.
-- **Firewall** : état de collecte et règles disponibles.
-- **Données brutes** : snapshot JSON complet.
+- **Global view**: local machine, main IP interfaces, active virtual bridges and default gateways.
+- **Interfaces**: full inventory, including loopback, veth and DOWN interfaces.
+- **Routing**: all IPv4/IPv6 routes and policy routing rules.
+- **Firewall**: collection status and available rules.
+- **Raw data**: complete JSON snapshot.
 
-La vue globale masque volontairement les routes locales, broadcast et multicast ainsi que les interfaces veth. Les détails restent disponibles dans les vues dédiées.
+The global view intentionally hides local, broadcast and multicast routes as well as veth interfaces. Details remain available in the dedicated views.
 
 ## Tests
 
@@ -51,8 +51,8 @@ pytest
 ```
 
 
-## Outils de diagnostic (V0.3)
+## Diagnostic tools (V0.3)
 
-L'onglet **Diagnostic** propose un ping borné, un traceroute/tracepath et un test de connexion TCP. Ces opérations émettent volontairement du trafic réseau, mais ne modifient aucune configuration locale. La route choisie par le noyau est consultée avec `ip route get`.
+The **Diagnostic** tab offers a bounded ping, a traceroute/tracepath and a TCP connection test. These operations intentionally generate network traffic, but do not modify any local configuration. The kernel's chosen route is queried with `ip route get`.
 
-Le test TCP indique le résultat réellement observé ; il ne prétend pas identifier à lui seul la règle firewall responsable. Un timeout peut avoir plusieurs causes. Le traceroute utilise `tracepath` si disponible, sinon `traceroute`.
+The TCP test reports the result actually observed; it does not claim to identify the responsible firewall rule on its own. A timeout may have several causes. The traceroute uses `tracepath` when available, otherwise `traceroute`.

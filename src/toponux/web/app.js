@@ -11,6 +11,8 @@ const graphStyle = [
   { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-host-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bridge"]', style: { 'background-color': cssVar('--graph-bridge-bg'), 'border-color': cssVar('--graph-bridge-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="gateway"]', style: { 'background-color': cssVar('--graph-gateway-bg'), 'border-color': cssVar('--graph-gateway-border'), shape: 'diamond', width: 130, height: 90 } },
+  { selector: 'node[kind="neighbor"]', style: { 'background-color': cssVar('--graph-neighbor-bg'), 'border-color': cssVar('--graph-neighbor-border'), shape: 'ellipse', width: 126, height: 46, 'font-size': 10 } },
+  { selector: 'node[kind="neighbor"][?docker]', style: { 'border-style': 'dashed' } },
   { selector: 'edge', style: { width: 2, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', label: 'data(label)', 'font-size': 9, color: cssVar('--graph-edge-label'), 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 3 } },
   { selector: ':selected', style: { 'border-width': 3, 'border-color': cssVar('--graph-selected') } },
 ];
@@ -32,9 +34,22 @@ function showDetails(data) {
   $('detail-hint').textContent = data.kind === 'host' ? 'Local machine' : data.name || data.kind;
   $('details').textContent = data.details || 'No extra details.';
 }
+function visibleGraphElements() {
+  const showIpv6 = $('graph-ipv6').checked;
+  const showDocker = $('graph-docker').checked;
+  const nodes = (graph.nodes || []).filter(node => {
+    const data = node.data || {};
+    if (!showIpv6 && data.family === 'ip6') return false;
+    if (!showDocker && data.docker) return false;
+    return true;
+  });
+  const ids = new Set(nodes.map(node => node.data.id));
+  const edges = (graph.edges || []).filter(edge => ids.has(edge.data.source) && ids.has(edge.data.target));
+  return [...nodes, ...edges];
+}
 function renderGraph() {
   if (cy) cy.destroy();
-  cy = cytoscape({ container: $('cy'), elements: [...(graph.nodes || []), ...(graph.edges || [])], style: graphStyle,
+  cy = cytoscape({ container: $('cy'), elements: visibleGraphElements(), style: graphStyle,
     layout: { name: 'breadthfirst', directed: true, roots: '#host', spacingFactor: 1.35, padding: 45, animate: false }, minZoom: .25, maxZoom: 3 });
   cy.on('tap', 'node', event => showDetails(event.target.data()));
   cy.on('tap', event => { if (event.target === cy) { $('detail-hint').textContent = 'Select an element in the graph.'; $('details').textContent = 'Nothing selected.'; } });
@@ -348,6 +363,7 @@ $('firewall-families').addEventListener('click', event => {
   renderFirewallFlow(snapshot.firewall_view || {});
 });
 $('refresh').addEventListener('click', refresh);
+['graph-ipv6', 'graph-docker'].forEach(id => $(id).addEventListener('change', renderGraph));
 refresh();
 
 

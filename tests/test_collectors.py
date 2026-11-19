@@ -42,7 +42,7 @@ def test_firewall_without_backend_has_no_rules_key(monkeypatch):
     assert result["backend"] == "unavailable"
     assert "rules" not in result
     assert result["error"]
-    assert result["nft_error"] == "nft non installé"
+    assert result["nft_error"] == "nft not installed"
 
 
 def test_firewall_reports_iptables_failure(monkeypatch):

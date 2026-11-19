@@ -41,7 +41,7 @@ def _check_rate_limit(client: str) -> None:
             retry_after = max(1, int(TOOL_RATE_WINDOW - (now - hits[0])))
             raise HTTPException(
                 status_code=429,
-                detail="Trop de sondes réseau. Réessaie dans quelques instants.",
+                detail="Too many network probes. Try again shortly.",
                 headers={"Retry-After": str(retry_after)},
             )
         hits.append(now)

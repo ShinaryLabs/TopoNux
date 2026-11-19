@@ -17,7 +17,7 @@ def collect_firewall() -> dict:
         except (RuntimeError, ValueError) as exc:
             nft_error = str(exc)
     else:
-        nft_error = "nft non installé"
+        nft_error = "nft not installed"
 
     if shutil.which("iptables-save"):
         try:
@@ -27,4 +27,4 @@ def collect_firewall() -> dict:
         except RuntimeError as exc:
             return {"backend": "unavailable", "error": str(exc), "nft_error": nft_error}
 
-    return {"backend": "unavailable", "error": "Ni nft ni iptables-save ne sont disponibles", "nft_error": nft_error}
+    return {"backend": "unavailable", "error": "Neither nft nor iptables-save is available", "nft_error": nft_error}

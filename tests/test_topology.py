@@ -30,3 +30,32 @@ def test_graph_without_interfaces_or_routes_still_has_host():
     assert len(graph["nodes"]) == 1
     assert graph["nodes"][0]["data"]["id"] == "host"
     assert graph["edges"] == []
+
+
+def test_user_bridge_is_not_treated_as_container_network():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "br-wan", "operstate": "UP", "addr_info": [{"local": "198.51.100.1", "prefixlen": 24}]},
+            {"ifname": "br-0123456789ab", "operstate": "UP", "addr_info": [{"local": "172.18.0.1", "prefixlen": 16}]},
+        ],
+        "routes": {},
+    }
+
+    ids = {node["data"]["id"] for node in build_graph(snapshot)["nodes"]}
+
+    assert "if:br-wan" in ids
+    assert "bridge:br-0123456789ab" in ids
+
+
+def test_on_link_default_route_is_shown_without_gateway():
+    snapshot = {
+        "interfaces": [],
+        "routes": {"ipv4": [{"dst": "default", "dev": "ppp0", "table": "main"}]},
+    }
+
+    graph = build_graph(snapshot)
+    nodes = {node["data"]["id"]: node["data"] for node in graph["nodes"]}
+
+    assert "gateway:ipv4:ppp0:0" in nodes
+    assert "Default route" in nodes["gateway:ipv4:ppp0:0"]["label"]
+    assert "on-link" in nodes["gateway:ipv4:ppp0:0"]["details"]

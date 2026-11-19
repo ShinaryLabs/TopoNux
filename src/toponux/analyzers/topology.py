@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import ipaddress
+import re
+
+# Docker, libvirt and podman create bridges with recognizable generated names.
+# User bridges such as "br-wan" must not be mistaken for container networks.
+_VIRTUAL_BRIDGE_RE = re.compile(r"^(?:docker0|virbr\d*|podman\d*)$")
+_DOCKER_BRIDGE_RE = re.compile(r"^br-[0-9a-f]{12}$")
+_VETH_RE = re.compile(r"^veth[0-9a-z]+$")
 
 
 def _is_virtual_bridge(iface: dict) -> bool:
     name = iface.get("ifname", "")
-    return name == "docker0" or name.startswith(("br-", "virbr", "podman"))
+    return bool(_VIRTUAL_BRIDGE_RE.fullmatch(name) or _DOCKER_BRIDGE_RE.fullmatch(name))
+
+
+def _is_veth(iface: dict) -> bool:
+    return bool(_VETH_RE.fullmatch(iface.get("ifname", "")))
 
 
 def _addresses(iface: dict) -> list[str]:
@@ -41,10 +52,10 @@ def build_graph(snapshot: dict) -> dict:
         {
             "data": {
                 "id": "host",
-                "label": "Machine locale",
+                "label": "Local machine",
                 "kind": "host",
                 "details": (
-                    "Vue synthétique de la configuration réseau. Sélectionne un élément pour consulter ses propriétés."
+                    "Synthetic view of the network configuration. Select an element to inspect its properties."
                 ),
             }
         }
@@ -53,7 +64,7 @@ def build_graph(snapshot: dict) -> dict:
     # Physical / non-container interfaces with an address are shown individually.
     for iface in interfaces:
         name = iface.get("ifname", "unknown")
-        if name == "lo" or name.startswith("veth") or _is_virtual_bridge(iface):
+        if name == "lo" or _is_veth(iface) or _is_virtual_bridge(iface):
             continue
         addresses = _addresses(iface)
         if not addresses:
@@ -70,11 +81,11 @@ def build_graph(snapshot: dict) -> dict:
                     "state": state,
                     "details": "\n".join(
                         [
-                            f"Interface : {name}",
-                            f"État : {state}",
-                            f"MTU : {iface.get('mtu', '?')}",
-                            f"MAC : {iface.get('address', '—')}",
-                            "Adresses :",
+                            f"Interface: {name}",
+                            f"State: {state}",
+                            f"MTU: {iface.get('mtu', '?')}",
+                            f"MAC: {iface.get('address', '—')}",
+                            "Addresses:",
                             *addresses,
                         ]
                     ),
@@ -96,57 +107,58 @@ def build_graph(snapshot: dict) -> dict:
             {
                 "data": {
                     "id": node_id,
-                    "label": f"{name}\n{', '.join(networks) if networks else 'sans réseau IP'}",
+                    "label": f"{name}\n{', '.join(networks) if networks else 'no IP network'}",
                     "kind": "bridge",
                     "name": name,
                     "state": state,
                     "details": "\n".join(
                         [
-                            f"Bridge : {name}",
-                            f"État : {state}",
-                            f"MTU : {iface.get('mtu', '?')}",
-                            f"Interfaces esclaves : {sum(1 for x in interfaces if x.get('master') == name)}",
-                            "Adresses :",
-                            *(addresses or ["Aucune"]),
+                            f"Bridge: {name}",
+                            f"State: {state}",
+                            f"MTU: {iface.get('mtu', '?')}",
+                            f"Member interfaces: {sum(1 for x in interfaces if x.get('master') == name)}",
+                            "Addresses:",
+                            *(addresses or ["None"]),
                         ]
                     ),
                 }
             }
         )
-        edges.append({"data": {"id": f"host-{name}", "source": "host", "target": node_id, "label": "réseau virtuel"}})
+        edges.append({"data": {"id": f"host-{name}", "source": "host", "target": node_id, "label": "virtual network"}})
 
-    # Show only the default gateway(s) in the overview. All routes remain in the Routes tab.
+    # Show only the default route(s) in the overview. All routes remain in the Routes tab.
+    # On-link defaults have no gateway: they are shown as a default route through their device.
     default_routes = []
     for family, routes in snapshot.get("routes", {}).items():
         for route in routes:
-            if route.get("dst") == "default" and route.get("gateway"):
+            if route.get("dst") == "default":
                 default_routes.append((family, route))
     for index, (family, route) in enumerate(default_routes):
-        gateway = route["gateway"]
-        gw_id = f"gateway:{family}:{gateway}:{index}"
+        gateway = route.get("gateway")
         dev = route.get("dev")
+        hop = gateway or dev or "unknown"
+        gw_id = f"gateway:{family}:{hop}:{index}"
+        label = f"Gateway\n{gateway}" if gateway else f"Default route\n{dev or '—'}"
         details = "\n".join(
             [
-                f"Passerelle : {gateway}",
-                f"Famille : {family}",
-                f"Interface : {dev or '—'}",
+                f"Gateway: {gateway or '— (on-link)'}",
+                f"Family: {family}",
+                f"Interface: {dev or '—'}",
                 f"Table : {route.get('table', 'main')}",
-                f"Métrique : {route.get('metric', '—')}",
+                f"Metric: {route.get('metric', '—')}",
             ]
         )
         nodes.append(
             {
                 "data": {
                     "id": gw_id,
-                    "label": f"Passerelle\n{gateway}",
+                    "label": label,
                     "kind": "gateway",
                     "details": details,
                 }
             }
         )
         target = f"if:{dev}" if dev and any(n["data"]["id"] == f"if:{dev}" for n in nodes) else "host"
-        edges.append(
-            {"data": {"id": f"default-{index}", "source": target, "target": gw_id, "label": "route par défaut"}}
-        )
+        edges.append({"data": {"id": f"default-{index}", "source": target, "target": gw_id, "label": "default route"}})
 
     return {"nodes": nodes, "edges": edges}

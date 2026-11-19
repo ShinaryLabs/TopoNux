@@ -25,6 +25,7 @@
       <button class="tab" id="tab-btn-routes" data-tab="routes" role="tab" aria-selected="false" aria-controls="tab-routes">Routing</button>
       <button class="tab" id="tab-btn-firewall" data-tab="firewall" role="tab" aria-selected="false" aria-controls="tab-firewall">Firewall</button>
       <button class="tab" id="tab-btn-diagnostics" data-tab="diagnostics" role="tab" aria-selected="false" aria-controls="tab-diagnostics">Network tools</button>
+      <button class="tab" id="tab-btn-data" data-tab="data" role="tab" aria-selected="false" aria-controls="tab-data">Data sources</button>
     </nav>
 
     <section id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
@@ -87,6 +88,116 @@
         <pre id="port-result" class="tool-result">No test run yet.</pre>
       </section>
       <section class="panel tool-note"><h2>About network probes</h2><ul><li>These tools are active probes: ping, traceroute and TCP connections send packets.</li><li>They do not modify any address, route, firewall rule or system configuration.</li><li>An incomplete traceroute may simply mean that some routers do not answer probes.</li><li>A successful TCP test proves the connection is possible from this machine, not which rule allowed it.</li><li>A timeout alone does not prove a local firewall block.</li></ul></section>
+    </section>
+
+    <section id="tab-data" class="tab-content panel table-panel data-sources" role="tabpanel" aria-labelledby="tab-btn-data">
+      <div class="table-toolbar"><div><h2>Data sources</h2><p>Every dataset is read with a local, read-only command. Toponux never writes network configuration.</p></div><span class="status-badge ok">Read-only</span></div>
+
+      <div class="table-wrap sources-wrap">
+        <table class="sources-table">
+          <thead><tr><th>Dataset</th><th>Command</th><th>Fields used</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Interfaces</strong><small>Interfaces tab</small></td>
+              <td><code>ip -j address show</code></td>
+              <td><code>ifname</code>, <code>operstate</code>, <code>mtu</code>, <code>address</code>, <code>link_type</code>, <code>master</code>, <code>addr_info[]</code></td>
+              <td>Includes DOWN and veth interfaces. <code>-j</code> gives stable JSON instead of locale-dependent text.</td>
+            </tr>
+            <tr>
+              <td><strong>Neighbours</strong><small>Overview graph</small></td>
+              <td><code>ip -j neigh show</code></td>
+              <td><code>dst</code>, <code>dev</code>, <code>lladdr</code>, <code>state[]</code></td>
+              <td>ARP (IPv4) and NDP (IPv6) cache. Recent peers only, not a full LAN inventory. Entries without a MAC and <code>lo</code>/<code>veth</code> devices are skipped. Grouped per device and MAC.</td>
+            </tr>
+            <tr>
+              <td><strong>IPv4 routes</strong><small>Routing tab</small></td>
+              <td><code>ip -j -4 route show table all</code></td>
+              <td><code>dst</code>, <code>gateway</code>, <code>dev</code>, <code>table</code>, <code>metric</code>, <code>type</code>, <code>scope</code>, <code>flags</code></td>
+              <td>All tables, including <code>local</code>, <code>broadcast</code> and <code>multicast</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>IPv6 routes</strong><small>Routing tab</small></td>
+              <td><code>ip -j -6 route show table all</code></td>
+              <td>Same fields as IPv4</td>
+              <td>IPv6 routes are collected separately so one family can fail without hiding the other.</td>
+            </tr>
+            <tr>
+              <td><strong>IPv4 policy rules</strong><small>Routing tab</small></td>
+              <td><code>ip -j -4 rule show</code></td>
+              <td><code>priority</code>, <code>src</code>, <code>table</code>, <code>fwmark</code>, <code>iif</code>, <code>oif</code></td>
+              <td>Rules select which routing table to consult, in priority order.</td>
+            </tr>
+            <tr>
+              <td><strong>IPv6 policy rules</strong><small>Routing tab</small></td>
+              <td><code>ip -j -6 rule show</code></td>
+              <td>Same fields as IPv4</td>
+              <td>Collected independently from IPv4 rules.</td>
+            </tr>
+            <tr>
+              <td><strong>Firewall</strong><small>Firewall tab</small></td>
+              <td><code>nft -j list ruleset</code><br>fallback: <code>iptables-save</code>, <code>ip6tables-save</code></td>
+              <td>Tables, chains, hooks, policies, rules, matches, counters, verdicts</td>
+              <td>nftables JSON is preferred. Text iptables output is parsed best-effort. Reading nftables often needs root or <code>CAP_NET_ADMIN</code>; without it the tab shows a warning and the other views keep working.</td>
+            </tr>
+            <tr>
+              <td><strong>Topology graph</strong><small>Overview tab</small></td>
+              <td>No system command</td>
+              <td>Built from interfaces, routes and neighbours</td>
+              <td>Deliberately simplified: only default routes, grouped bridges and neighbour leaves. Full data stays in the other tabs.</td>
+            </tr>
+            <tr>
+              <td><strong>Ping probe</strong><small>Network tools tab</small></td>
+              <td><code>ping -n -c &lt;count&gt; -W 2 -- &lt;target&gt;</code></td>
+              <td>Exit code, stdout, stderr</td>
+              <td>Active probe: sends ICMP packets. Bounded to 1–10 packets and rate-limited.</td>
+            </tr>
+            <tr>
+              <td><strong>Path probe</strong><small>Network tools tab</small></td>
+              <td><code>tracepath -n -m &lt;hops&gt; &lt;target&gt;</code><br>fallback: <code>traceroute -n -m &lt;hops&gt; -w 1 &lt;target&gt;</code></td>
+              <td>Exit code, stdout, stderr</td>
+              <td>UDP probes. An incomplete path may only mean that routers do not answer probes.</td>
+            </tr>
+            <tr>
+              <td><strong>Port probe</strong><small>Network tools tab</small></td>
+              <td>Python <code>socket.create_connection()</code></td>
+              <td>Connect result, latency, local address</td>
+              <td>Active TCP connection attempt. Proves reachability from this machine, not which rule allowed it.</td>
+            </tr>
+            <tr>
+              <td><strong>Route lookup</strong><small>Network tools tab</small></td>
+              <td><code>ip route get &lt;target&gt;</code></td>
+              <td>Selected local route</td>
+              <td>Read-only lookup shown with every diagnostic result.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 class="subheading">How collection works</h2>
+      <ul class="sources-list">
+        <li>Each subsystem has its own collector. A failing collector stores its error in <code>errors</code> and returns a safe default, so one missing permission never hides the rest.</li>
+        <li>Commands run without a shell, with a fixed argument list and a 10-second timeout. No user input is ever passed to the collectors.</li>
+        <li>Data is collected only when you press <strong>Refresh</strong> or load the page. There is no background polling and no persistence.</li>
+        <li>Nothing leaves the machine: no analytics, no external API, no CDN. Cytoscape is vendored and served locally.</li>
+        <li>Collectors do not resolve hostnames and do not send packets. Only the diagnostic tools send traffic, and they are capped at 10 requests per minute per client.</li>
+      </ul>
+
+      <h2 class="subheading">Permissions</h2>
+      <ul class="sources-list">
+        <li><code>ip</code> commands normally work as an unprivileged user.</li>
+        <li><code>nft list ruleset</code> and <code>iptables-save</code> may require root or <code>CAP_NET_ADMIN</code>. The firewall view reports the exact error instead of failing silently.</li>
+        <li>Toponux never runs <code>sudo</code>. If a command needs more privilege, run the server with the appropriate permissions yourself.</li>
+        <li>No command modifies interfaces, addresses, routes, rules or firewall state.</li>
+      </ul>
+
+      <h2 class="subheading">Known limits</h2>
+      <ul class="sources-list">
+        <li>The neighbour table only lists peers with recent traffic. Absence from the graph does not mean a host is unreachable.</li>
+        <li><code>STALE</code>, <code>DELAY</code> and <code>PROBE</code> entries can be outdated.</li>
+        <li>Docker and virtual bridges hide their veth members; neighbours on those bridges are containers, not physical machines.</li>
+        <li>Firewall parsing is lossless for nftables JSON, best-effort for iptables text.</li>
+        <li>Diagnostic results are observations at one moment, not proof of a permanent state.</li>
+      </ul>
     </section>
 
     <section class="panel raw"><h2>Raw data</h2><details><summary>Show the full JSON snapshot</summary><pre id="raw-json"></pre></details></section>

@@ -319,6 +319,34 @@ td small {
   font-size: 14px;
   margin: 24px 0 12px;
 }
+.sources-table {
+  white-space: normal;
+}
+.sources-table td {
+  vertical-align: top;
+  line-height: 1.5;
+}
+.sources-table code,
+.sources-list code {
+  display: inline-block;
+  background: #0b1220;
+  border: 1px solid #263449;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  color: #a5b4fc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sources-list {
+  padding-left: 20px;
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.sources-list li + li {
+  margin-top: 6px;
+}
 .rules-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

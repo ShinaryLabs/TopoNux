@@ -50,10 +50,25 @@
       <h2 class="subheading">Policy routing rules</h2><div id="rules-list" class="rules-list"></div>
     </section>
 
-    <section id="tab-firewall" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-firewall">
-      <div class="table-toolbar"><div><h2>Firewall</h2><p>Reads existing rules only. Nothing is modified.</p></div><span id="firewall-badge" class="status-badge">—</span></div>
+    <section id="tab-firewall" class="tab-content firewall-view" role="tabpanel" aria-labelledby="tab-btn-firewall">
+      <div class="table-toolbar panel"><div><h2>Firewall</h2><p>Reads existing rules only. Nothing is modified.</p></div><span id="firewall-badge" class="status-badge">—</span></div>
       <div id="firewall-message" class="notice"></div>
-      <pre id="firewall-raw" class="code-view">No data.</pre>
+      <div id="firewall-kpis" class="fw-kpis"></div>
+      <div class="fw-toolbar panel">
+        <input id="firewall-filter" type="search" placeholder="Filter chain, match, verdict…" aria-label="Filter firewall rules">
+        <div id="firewall-families" class="fw-families" role="group" aria-label="Address family">
+          <button class="fw-family active" data-family="ip" aria-pressed="true">IPv4</button>
+          <button class="fw-family" data-family="ip6" aria-pressed="false">IPv6</button>
+        </div>
+        <label class="fw-toggle"><input type="checkbox" id="firewall-group" checked> Group similar rules</label>
+      </div>
+      <div id="firewall-verdicts" class="fw-verdicts" role="group" aria-label="Filter by verdict"></div>
+      <section class="panel fw-graph-panel">
+        <div class="panel-heading"><div><h2>Rule flow</h2><p>Hooks, user chains and terminal verdicts. Click a chain to filter the cards below.</p></div></div>
+        <div id="fw-graph"></div>
+      </section>
+      <div id="firewall-tables" class="fw-tables"></div>
+      <details class="panel raw fw-raw"><summary>Show the raw JSON returned by the collector</summary><pre id="firewall-raw" class="code-view">No data.</pre></details>
     </section>
 
     <section id="tab-diagnostics" class="tab-content diagnostics-grid" role="tabpanel" aria-labelledby="tab-btn-diagnostics">

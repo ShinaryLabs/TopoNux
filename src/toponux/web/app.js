@@ -58,19 +58,223 @@ function ruleRow(rule) {
     .join(' · ');
   return `<div class="rule-row"><b>Priority ${escapeHtml(rule.priority)}</b><span>source ${escapeHtml(rule.src || 'all')}</span><span>table ${escapeHtml(rule.table || '—')}</span>${extras ? `<span>${escapeHtml(extras)}</span>` : ''}</div>`;
 }
+const FW_VERDICTS = ['accept', 'drop', 'reject', 'jump', 'nat', 'return', 'log', 'other'];
+const FW_IFACE_PATTERN = /br-[0-9a-f]+|docker0|veth[0-9a-z]+/gi;
+let fwFilter = '';
+let fwVerdict = 'all';
+let fwGroup = true;
+let fwFamily = 'ip';
+let fwCy;
+
+const fwStyle = [
+  { selector: 'node', style: { label: 'data(label)', 'font-size': 10, 'text-valign': 'center', 'text-halign': 'center', width: 118, height: 34, 'background-color': cssVar('--graph-node-bg'), 'border-width': 1, 'border-color': cssVar('--graph-node-border'), color: cssVar('--graph-label'), 'text-wrap': 'ellipsis', 'text-max-width': 108 } },
+  { selector: 'node[kind="hook"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), 'font-weight': 700, width: 138 } },
+  { selector: 'node[kind="verdict"]', style: { shape: 'round-rectangle', width: 92, height: 30, 'font-weight': 700 } },
+  { selector: 'node[verdict="accept"]', style: { 'background-color': '#064e3b', 'border-color': '#34d399', color: '#a7f3d0' } },
+  { selector: 'node[verdict="drop"]', style: { 'background-color': '#7f1d1d', 'border-color': '#f87171', color: '#fecaca' } },
+  { selector: 'node[verdict="reject"]', style: { 'background-color': '#7c2d12', 'border-color': '#fb923c', color: '#fed7aa' } },
+  { selector: 'node[verdict="jump"]', style: { 'background-color': '#1e3a8a', 'border-color': '#60a5fa', color: '#bfdbfe' } },
+  { selector: 'node[verdict="nat"]', style: { 'background-color': '#4c1d95', 'border-color': '#c084fc', color: '#e9d5ff' } },
+  { selector: 'node[verdict="return"]', style: { 'background-color': '#78350f', 'border-color': '#fbbf24', color: '#fde68a' } },
+  { selector: 'node[verdict="log"]', style: { 'background-color': '#334155', 'border-color': '#94a3b8' } },
+  { selector: 'edge', style: { width: 1.5, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'font-size': 9, color: cssVar('--graph-edge-label'), label: 'data(label)', 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 2 } },
+];
+
+function formatBytes(value) {
+  if (!value) return '0 B';
+  const units = ['B', 'KiB', 'MiB', 'GiB'];
+  let size = value;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
+  return `${unit === 0 ? Math.round(size) : size.toFixed(1)} ${units[unit]}`;
+}
+
+function verdictLabel(rule) {
+  if (rule.verdict === 'jump') return `→ ${rule.target || 'chain'}`;
+  if (rule.verdict === 'nat') return rule.target || 'NAT';
+  return String(rule.verdict).toUpperCase();
+}
+
+function ruleHaystack(rule) {
+  return [rule.verdict, rule.target, rule.comment, ...(rule.matches || []).map(m => m.text)].filter(Boolean).join(' ').toLowerCase();
+}
+
+function buildFirewallGroups(rules) {
+  let groups;
+  if (fwGroup) {
+    groups = [];
+    rules.forEach(rule => {
+      const signature = [rule.verdict, rule.target || '', rule.comment || '', (rule.matches || []).map(m => m.text.replace(FW_IFACE_PATTERN, '<iface>')).join('|')].join('‖');
+      const last = groups[groups.length - 1];
+      if (last && last.signature === signature) { last.count += 1; last.rules.push(rule); }
+      else groups.push({ rule, rules: [rule], count: 1, signature });
+    });
+  } else {
+    groups = rules.map(rule => ({ rule, rules: [rule], count: 1, signature: null }));
+  }
+  let maxPackets = 0;
+  groups.forEach(group => {
+    const counter = group.rules.reduce((sum, rule) => {
+      if (!rule.counter) return sum;
+      return { packets: sum.packets + rule.counter.packets, bytes: sum.bytes + rule.counter.bytes };
+    }, { packets: 0, bytes: 0 });
+    group.counter = counter.packets || counter.bytes ? counter : null;
+    maxPackets = Math.max(maxPackets, group.counter ? group.counter.packets : 0);
+  });
+  groups.forEach(group => { group.maxPackets = maxPackets; });
+  return groups;
+}
+
+function groupMatchesFilter(group) {
+  if (fwVerdict !== 'all' && group.rule.verdict !== fwVerdict) return false;
+  if (!fwFilter) return true;
+  return group.rules.some(rule => ruleHaystack(rule).includes(fwFilter));
+}
+
+function renderFirewallGroup(group) {
+  const rule = group.rule;
+  const matches = (rule.matches || []).map(match => `<span class="fw-match kind-${escapeHtml(match.kind)}">${escapeHtml(match.text)}</span>`).join('');
+  const variants = group.count > 1 ? new Set(group.rules.map(item => (item.matches || []).map(m => m.text).join('|'))).size : 0;
+  const title = group.count > 1 ? group.rules.map(item => (item.matches || []).map(m => m.text).join(' ')).join('\n') : '';
+  const counter = group.counter;
+  const percent = counter && group.maxPackets ? Math.max(3, Math.round((counter.packets / group.maxPackets) * 100)) : 0;
+  return `<div class="fw-rule v-${escapeHtml(rule.verdict)}">
+    <div class="fw-rule-main">
+      <span class="fw-verdict v-${escapeHtml(rule.verdict)}">${escapeHtml(verdictLabel(rule))}</span>
+      <span class="fw-matches">${matches || '<span class="fw-match">any</span>'}</span>
+      ${rule.comment ? `<span class="fw-comment">${escapeHtml(rule.comment)}</span>` : ''}
+      ${group.count > 1 ? `<span class="fw-mult" title="${escapeHtml(title)}">×${group.count}${variants > 1 ? ' variants' : ''}</span>` : ''}
+    </div>
+    <div class="fw-rule-meta">
+      ${rule.handle != null ? `<span>#${escapeHtml(rule.handle)}</span>` : ''}
+      ${counter ? `<span>${counter.packets.toLocaleString()} pkts · ${formatBytes(counter.bytes)}</span><span class="fw-bar"><i style="width:${percent}%"></i></span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderFirewallChain(chain) {
+  const nameMatch = Boolean(fwFilter && chain.name.toLowerCase().includes(fwFilter));
+  const groups = buildFirewallGroups(chain.rules || []).filter(group => groupMatchesFilter(group) || nameMatch);
+  if (!groups.length && !nameMatch) return '';
+  const policy = chain.policy ? `<span class="fw-policy ${escapeHtml(chain.policy)}">policy ${escapeHtml(chain.policy)}</span>` : '';
+  const hook = chain.hook
+    ? `<span class="fw-hook">hook ${escapeHtml(chain.hook)}${chain.type ? ` · ${escapeHtml(chain.type)}` : ''}${chain.priority != null ? ` · prio ${escapeHtml(chain.priority)}` : ''}</span>`
+    : '<span class="fw-hook">user chain</span>';
+  const shown = groups.reduce((sum, group) => sum + group.count, 0);
+  return `<div class="fw-chain">
+    <div class="fw-chain-head"><div><strong>${escapeHtml(chain.name)}</strong>${hook}</div><div>${policy}<span class="fw-count">${shown}/${chain.stats.rules} rules</span></div></div>
+    <div class="fw-rules">${groups.map(renderFirewallGroup).join('') || '<p class="empty">No rule matches the filter.</p>'}</div>
+  </div>`;
+}
+
+function renderFirewallTable(table) {
+  const chains = (table.chains || []).map(renderFirewallChain).filter(Boolean).join('');
+  return `<section class="panel fw-table">
+    <div class="fw-table-head"><h2>${escapeHtml(table.name)}</h2><span class="fw-table-meta">${escapeHtml(table.family)} · ${table.stats.chains} chains · ${table.stats.rules} rules</span></div>
+    ${chains || '<p class="empty">No chain contains rules for the current filter.</p>'}
+  </section>`;
+}
+
+function renderFirewallTables(view) {
+  const all = view.tables || [];
+  const matching = all.filter(table => table.family === fwFamily);
+  const tables = matching.length ? matching : all;
+  $('firewall-tables').innerHTML = tables.map(renderFirewallTable).join('') || '<p class="empty">No firewall table available.</p>';
+}
+
+function renderFirewallKpis(view) {
+  const totals = view.totals || {};
+  const chainCount = (view.tables || []).reduce((sum, table) => sum + (table.chains || []).length, 0);
+  $('firewall-kpis').innerHTML = `<span class="fw-kpi"><b>${totals.rules || 0}</b> rules</span><span class="fw-kpi"><b>${(view.tables || []).length}</b> tables</span><span class="fw-kpi"><b>${chainCount}</b> chains</span>`;
+  const chips = [`<button class="fw-chip ${fwVerdict === 'all' ? 'active' : ''}" data-verdict="all" aria-pressed="${fwVerdict === 'all'}">ALL <span>${totals.rules || 0}</span></button>`];
+  FW_VERDICTS.filter(verdict => totals[verdict]).forEach(verdict => {
+    chips.push(`<button class="fw-chip v-${verdict} ${fwVerdict === verdict ? 'active' : ''}" data-verdict="${verdict}" aria-pressed="${fwVerdict === verdict}">${verdict.toUpperCase()} <span>${totals[verdict]}</span></button>`);
+  });
+  $('firewall-verdicts').innerHTML = chips.join('');
+}
+
+function renderFirewallFlow(view) {
+  const tables = (view.tables || []).filter(table => table.family === fwFamily);
+  const nodes = [];
+  const edges = new Map();
+  const seen = new Set();
+  const addNode = (id, label, kind, extra = {}) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    nodes.push({ data: { id, label, kind, ...extra } });
+  };
+  tables.forEach(table => {
+    const prefix = `${table.family}:${table.name}`;
+    (table.chains || []).forEach(chain => {
+      if (!chain.stats.rules && !chain.hook) return;
+      const source = `c:${prefix}:${chain.name}`;
+      addNode(source, chain.name, chain.hook ? 'hook' : 'chain', { chain: chain.name });
+      (chain.rules || []).forEach(rule => {
+        if (rule.verdict === 'jump' && rule.target) {
+          const target = `c:${prefix}:${rule.target}`;
+          addNode(target, rule.target, 'chain', { chain: rule.target });
+          addEdge(edges, source, target);
+        } else if (['accept', 'drop', 'reject', 'return', 'nat', 'log', 'other'].includes(rule.verdict)) {
+          const suffix = rule.verdict === 'nat' ? `:${rule.target || 'NAT'}` : '';
+          const target = `v:${rule.verdict}${suffix}`;
+          addNode(target, rule.verdict === 'nat' ? (rule.target || 'NAT') : rule.verdict.toUpperCase(), 'verdict', { verdict: rule.verdict });
+          addEdge(edges, source, target);
+        }
+      });
+    });
+  });
+  const hooks = nodes.filter(node => node.data.kind === 'hook').map(node => node.data.id);
+  const edgeList = [...edges.entries()].map(([key, count], index) => {
+    const [source, target] = key.split('>');
+    return { data: { id: `e${index}`, source, target, label: count > 1 ? `×${count}` : '' } };
+  });
+  if (fwCy) { fwCy.destroy(); fwCy = null; }
+  const container = $('fw-graph');
+  if (!nodes.length) { container.innerHTML = '<p class="empty">No rule to draw for this family.</p>'; return; }
+  container.innerHTML = '';
+  fwCy = cytoscape({ container, elements: [...nodes, ...edgeList], style: fwStyle,
+    layout: { name: 'breadthfirst', directed: true, roots: hooks, spacingFactor: 1.2, padding: 20, animate: false },
+    minZoom: .2, maxZoom: 2.5 });
+  fwCy.on('tap', 'node', event => {
+    const chain = event.target.data('chain');
+    if (!chain) return;
+    fwFilter = String(chain).toLowerCase();
+    $('firewall-filter').value = chain;
+    renderFirewallTables(snapshot.firewall_view || {});
+  });
+}
+
+function addEdge(edges, source, target) {
+  const key = `${source}>${target}`;
+  edges.set(key, (edges.get(key) || 0) + 1);
+}
+
 function renderFirewall() {
-  const fw = snapshot.firewall || {};
-  const available = Boolean(fw.backend && fw.backend !== 'unavailable' && fw.rules != null);
-  $('firewall-status').textContent = available ? fw.backend : 'Unavailable';
-  $('firewall-sub').textContent = available ? 'Rules readable' : 'Insufficient permissions or missing backend';
-  $('firewall-badge').textContent = available ? fw.backend : 'Not accessible';
+  const view = snapshot.firewall_view || { backend: 'unavailable', available: false, tables: [], totals: {}, warnings: [] };
+  const available = Boolean(view.available);
+  $('firewall-status').textContent = available ? view.backend : 'Unavailable';
+  $('firewall-sub').textContent = available ? `${view.totals.rules || 0} rules readable` : 'Insufficient permissions or missing backend';
+  $('firewall-badge').textContent = available ? view.backend : 'Not accessible';
   $('firewall-badge').className = `status-badge ${available ? 'ok' : 'warn'}`;
   let message = available
-    ? `Backend detected: ${fw.backend}. The rules below are readable in read-only mode.`
-    : `Toponux could not read the firewall. ${fw.error || fw.nft_error || 'No information available.'}`;
-  if (available && fw.nft_error) message += ` nftables unavailable (${fw.nft_error}): falling back to iptables.`;
+    ? `Backend detected: ${view.backend}. Rules are read-only and nothing can be modified from this page.`
+    : `Toponux could not read the firewall. ${(view.warnings || [])[0] || 'No information available.'}`;
+  if (available && (view.warnings || []).length) message += ` Notes: ${view.warnings.join(' · ')}`;
   $('firewall-message').textContent = message;
-  $('firewall-raw').textContent = fw.rules != null ? JSON.stringify(fw.rules, null, 2) : 'No usable rules returned by the collector.';
+  $('firewall-raw').textContent = snapshot.firewall && snapshot.firewall.rules != null
+    ? JSON.stringify(snapshot.firewall.rules, null, 2)
+    : 'No usable rules returned by the collector.';
+  if (!available) {
+    $('firewall-kpis').innerHTML = '';
+    $('firewall-verdicts').innerHTML = '';
+    $('firewall-tables').innerHTML = '';
+    $('fw-graph').innerHTML = '<p class="empty">Firewall rules are not readable.</p>';
+    if (fwCy) { fwCy.destroy(); fwCy = null; }
+    return;
+  }
+  renderFirewallKpis(view);
+  renderFirewallTables(view);
+  renderFirewallFlow(view);
 }
 function renderSnapshot() {
   const interfaces = snapshot.interfaces || [];
@@ -112,9 +316,37 @@ document.querySelectorAll('.tab').forEach(button => button.addEventListener('cli
   });
   document.querySelectorAll('.tab-content').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${button.dataset.tab}`));
   if (button.dataset.tab === 'overview' && cy) cy.resize();
+  if (button.dataset.tab === 'firewall' && fwCy) { fwCy.resize(); fwCy.fit(undefined, 30); }
 }));
 $('interface-filter').addEventListener('input', renderInterfaces);
 $('route-filter').addEventListener('input', renderRoutes);
+$('firewall-filter').addEventListener('input', event => {
+  fwFilter = event.target.value.trim().toLowerCase();
+  renderFirewallTables(snapshot.firewall_view || {});
+});
+$('firewall-group').addEventListener('change', event => {
+  fwGroup = event.target.checked;
+  renderFirewallTables(snapshot.firewall_view || {});
+});
+$('firewall-verdicts').addEventListener('click', event => {
+  const chip = event.target.closest('[data-verdict]');
+  if (!chip) return;
+  fwVerdict = chip.dataset.verdict;
+  renderFirewallKpis(snapshot.firewall_view || {});
+  renderFirewallTables(snapshot.firewall_view || {});
+});
+$('firewall-families').addEventListener('click', event => {
+  const button = event.target.closest('[data-family]');
+  if (!button) return;
+  fwFamily = button.dataset.family;
+  document.querySelectorAll('#firewall-families [data-family]').forEach(item => {
+    const active = item === button;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-pressed', String(active));
+  });
+  renderFirewallTables(snapshot.firewall_view || {});
+  renderFirewallFlow(snapshot.firewall_view || {});
+});
 $('refresh').addEventListener('click', refresh);
 refresh();
 

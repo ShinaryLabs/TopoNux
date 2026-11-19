@@ -42,6 +42,17 @@ def _network_labels(iface: dict) -> list[str]:
     return networks
 
 
+def _is_docker_interface(name: str) -> bool:
+    return name == "docker0" or bool(_DOCKER_BRIDGE_RE.fullmatch(name))
+
+
+def _neighbor_state(entry: dict) -> str:
+    state = entry.get("state", "")
+    if isinstance(state, list):
+        return " ".join(str(item) for item in state) or "UNKNOWN"
+    return str(state) or "UNKNOWN"
+
+
 def build_graph(snapshot: dict) -> dict:
     """Build a deliberately simplified overview; full data stays in detail tabs."""
     nodes: list[dict] = []
@@ -125,6 +136,71 @@ def build_graph(snapshot: dict) -> dict:
             }
         )
         edges.append({"data": {"id": f"host-{name}", "source": "host", "target": node_id, "label": "virtual network"}})
+
+    # ARP/NDP neighbours are shown as small leaf nodes attached to the interface
+    # or bridge that reaches them. Docker networks stay flagged for the UI filter.
+    parent_ids = {node["data"]["id"] for node in nodes}
+    grouped: dict[tuple[str, str], dict] = {}
+    raw_neighbors = snapshot.get("neighbors", [])
+    for entry in raw_neighbors if isinstance(raw_neighbors, list) else []:
+        dev, mac, dst = entry.get("dev"), entry.get("lladdr"), entry.get("dst")
+        if not dev or not mac or not dst or dev == "lo" or _VETH_RE.fullmatch(dev):
+            continue
+        parent = f"if:{dev}" if f"if:{dev}" in parent_ids else f"bridge:{dev}"
+        if parent not in parent_ids:
+            continue
+        record = grouped.setdefault((dev, mac), {"addresses": {"ip": [], "ip6": []}, "states": [], "parent": parent})
+        family = "ip6" if ":" in dst else "ip"
+        if dst not in record["addresses"][family]:
+            record["addresses"][family].append(dst)
+        state = _neighbor_state(entry)
+        if state not in record["states"]:
+            record["states"].append(state)
+
+    for (dev, mac), record in grouped.items():
+        ipv4, ipv6 = record["addresses"]["ip"], record["addresses"]["ip6"]
+        addresses = [*ipv4, *ipv6]
+        primary = addresses[0]
+        family = "ip" if ipv4 else "ip6"
+        docker = _is_docker_interface(dev)
+        node_id = f"neighbor:{dev}:{mac}"
+        more = f" (+{len(addresses) - 1})" if len(addresses) > 1 else ""
+        nodes.append(
+            {
+                "data": {
+                    "id": node_id,
+                    "label": f"{primary}{more}",
+                    "kind": "neighbor",
+                    "family": family,
+                    "docker": docker,
+                    "mac": mac,
+                    "dev": dev,
+                    "state": ", ".join(record["states"]),
+                    "addresses": addresses,
+                    "details": "\n".join(
+                        [
+                            f"Neighbor: {primary}",
+                            "Addresses:",
+                            *addresses,
+                            f"MAC: {mac}",
+                            f"Interface: {dev}",
+                            f"State: {', '.join(record['states'])}",
+                            "Source: ARP/NDP cache" + (" (container network)" if docker else ""),
+                        ]
+                    ),
+                }
+            }
+        )
+        edges.append(
+            {
+                "data": {
+                    "id": f"neighbor-{dev}-{mac}",
+                    "source": record["parent"],
+                    "target": node_id,
+                    "label": "docker" if docker else "neighbor",
+                }
+            }
+        )
 
     # Show only the default route(s) in the overview. All routes remain in the Routes tab.
     # On-link defaults have no gateway: they are shown as a default route through their device.

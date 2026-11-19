@@ -74,3 +74,20 @@ def test_snapshot_isolates_failures_and_never_returns_none():
     assert snapshot["firewall"] == {"backend": "unavailable"}
     assert "routes" in snapshot["errors"]
     assert snapshot["collected_at"]
+
+
+def test_neighbors_collector_reads_the_kernel_neighbour_table(monkeypatch):
+    from toponux.collectors import neighbors
+
+    captured = {}
+
+    def fake_run_json(command):
+        captured["command"] = command
+        return [{"dst": "192.0.2.20", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:ff", "state": ["REACHABLE"]}]
+
+    monkeypatch.setattr(neighbors, "run_json", fake_run_json)
+
+    result = neighbors.collect_neighbors()
+
+    assert captured["command"] == ["ip", "-j", "neigh", "show"]
+    assert result[0]["dst"] == "192.0.2.20"

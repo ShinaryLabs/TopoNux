@@ -59,3 +59,77 @@ def test_on_link_default_route_is_shown_without_gateway():
     assert "gateway:ipv4:ppp0:0" in nodes
     assert "Default route" in nodes["gateway:ipv4:ppp0:0"]["label"]
     assert "on-link" in nodes["gateway:ipv4:ppp0:0"]["details"]
+
+
+def test_neighbors_attach_to_their_interface_and_flag_docker_networks():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "eth1", "operstate": "UP", "addr_info": [{"local": "172.21.0.10", "prefixlen": 24}]},
+            {"ifname": "docker0", "operstate": "UP", "addr_info": [{"local": "172.17.0.1", "prefixlen": 16}]},
+        ],
+        "neighbors": [
+            {"dst": "172.21.0.1", "dev": "eth1", "lladdr": "bc:24:11:61:06:15", "state": ["REACHABLE"]},
+            {"dst": "172.17.0.2", "dev": "docker0", "lladdr": "7a:e8:25:73:c4:3a", "state": ["STALE"]},
+        ],
+        "routes": {},
+    }
+
+    graph = build_graph(snapshot)
+    nodes = {node["data"]["id"]: node["data"] for node in graph["nodes"]}
+    edges = {edge["data"]["id"]: edge["data"] for edge in graph["edges"]}
+
+    lan = nodes["neighbor:eth1:bc:24:11:61:06:15"]
+    assert lan["kind"] == "neighbor"
+    assert lan["family"] == "ip"
+    assert lan["docker"] is False
+    assert lan["label"] == "172.21.0.1"
+    assert edges["neighbor-eth1-bc:24:11:61:06:15"]["source"] == "if:eth1"
+
+    container = nodes["neighbor:docker0:7a:e8:25:73:c4:3a"]
+    assert container["docker"] is True
+    assert edges["neighbor-docker0-7a:e8:25:73:c4:3a"]["source"] == "bridge:docker0"
+
+
+def test_neighbor_addresses_are_grouped_per_mac_and_family_is_detected():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "eth0", "operstate": "UP", "addr_info": [{"local": "192.0.2.10", "prefixlen": 24}]},
+        ],
+        "neighbors": [
+            {"dst": "192.0.2.20", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:ff", "state": ["REACHABLE"]},
+            {"dst": "fe80::1", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:ff", "state": ["STALE"]},
+            {"dst": "fe80::2", "dev": "eth0", "lladdr": "11:22:33:44:55:66", "state": ["DELAY"]},
+        ],
+        "routes": {},
+    }
+
+    nodes = {node["data"]["id"]: node["data"] for node in build_graph(snapshot)["nodes"]}
+
+    dual = nodes["neighbor:eth0:aa:bb:cc:dd:ee:ff"]
+    assert dual["addresses"] == ["192.0.2.20", "fe80::1"]
+    assert dual["family"] == "ip"
+    assert dual["label"] == "192.0.2.20 (+1)"
+
+    ipv6_only = nodes["neighbor:eth0:11:22:33:44:55:66"]
+    assert ipv6_only["family"] == "ip6"
+
+
+def test_unusable_or_unattached_neighbor_entries_are_skipped():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "eth0", "operstate": "UP", "addr_info": [{"local": "192.0.2.10", "prefixlen": 24}]},
+        ],
+        "neighbors": [
+            {"dst": "192.0.2.30", "dev": "lo", "lladdr": "aa:aa:aa:aa:aa:aa", "state": ["REACHABLE"]},
+            {"dst": "192.0.2.31", "dev": "veth123", "lladdr": "bb:bb:bb:bb:bb:bb", "state": ["REACHABLE"]},
+            {"dst": "192.0.2.32", "dev": "eth0", "state": ["FAILED"]},
+            {"dst": "192.0.2.33", "dev": "eth9", "lladdr": "cc:cc:cc:cc:cc:cc", "state": ["STALE"]},
+            {"dst": "192.0.2.34", "dev": "eth0", "lladdr": "dd:dd:dd:dd:dd:dd", "state": ["STALE"]},
+        ],
+        "routes": {},
+    }
+
+    graph = build_graph(snapshot)
+    neighbor_ids = [node["data"]["id"] for node in graph["nodes"] if node["data"]["kind"] == "neighbor"]
+
+    assert neighbor_ids == ["neighbor:eth0:dd:dd:dd:dd:dd:dd"]

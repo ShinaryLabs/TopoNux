@@ -5,10 +5,12 @@ from collections import defaultdict, deque
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from toponux.analyzers.firewall import normalize_firewall
 from toponux.analyzers.topology import build_graph
 from toponux.collectors.diagnostics import run_ping, run_trace, test_tcp_port
 from toponux.collectors.firewall import collect_firewall
 from toponux.collectors.interfaces import collect_interfaces
+from toponux.collectors.neighbors import collect_neighbors
 from toponux.collectors.routes import collect_routes
 from toponux.collectors.rules import collect_policy_rules
 from toponux.models.network import collect_snapshot
@@ -17,6 +19,7 @@ router = APIRouter()
 
 COLLECTORS = {
     "interfaces": collect_interfaces,
+    "neighbors": collect_neighbors,
     "routes": collect_routes,
     "policy_rules": collect_policy_rules,
     "firewall": collect_firewall,
@@ -51,14 +54,19 @@ def _client_id(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _with_firewall_view(snapshot: dict) -> dict:
+    snapshot["firewall_view"] = normalize_firewall(snapshot.get("firewall"))
+    return snapshot
+
+
 @router.get("/api/snapshot")
 def get_snapshot():
-    return collect_snapshot(COLLECTORS)
+    return _with_firewall_view(collect_snapshot(COLLECTORS))
 
 
 @router.get("/api/graph")
 def get_graph():
-    snapshot = collect_snapshot(COLLECTORS)
+    snapshot = _with_firewall_view(collect_snapshot(COLLECTORS))
     return {"snapshot": snapshot, "graph": build_graph(snapshot)}
 
 

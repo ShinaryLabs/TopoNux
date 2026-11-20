@@ -386,6 +386,23 @@ $('refresh').addEventListener('click', refresh);
 refresh();
 
 
+function renderIpv6Report(data) {
+  const lines = [
+    `Address     ${data.address}`,
+    `Expanded    ${data.exploded}`,
+    `Type        ${data.type}`,
+  ];
+  if (data.zone) lines.push(`Zone        ${data.zone}`);
+  if (data.prefixlen != null) lines.push(`Prefix      /${data.prefixlen} · network ${data.network}`);
+  if (data.well_known.length) lines.push(`Well-known  ${data.well_known.join(', ')}`);
+  lines.push('', `Header      ${data.binary} …`);
+  for (const flag of data.flags) lines.push(`  ${flag.name.padEnd(6)} ${flag.value}  ${flag.meaning}`);
+  if (data.multicast_scope) lines.push(`  Scope value ${data.multicast_scope}`);
+  const properties = Object.entries(data.properties).filter(([, value]) => value).map(([name]) => name.replaceAll('_', ' '));
+  lines.push('', `Properties  ${properties.join(', ') || 'none'}`, `Reverse DNS ${data.reverse_dns}`);
+  return lines.join('\n');
+}
+
 async function postDiagnostic(path, payload, outputId, button) {
   const output = $(outputId);
   if (activeDiagnostic) activeDiagnostic.abort();
@@ -408,3 +425,17 @@ async function postDiagnostic(path, payload, outputId, button) {
 $('run-ping').addEventListener('click', () => postDiagnostic('/api/tools/ping', {target:$('path-target').value, count:Number($('ping-count').value)}, 'path-result', $('run-ping')));
 $('run-trace').addEventListener('click', () => postDiagnostic('/api/tools/trace', {target:$('path-target').value, max_hops:Number($('trace-hops').value)}, 'path-result', $('run-trace')));
 $('port-form').addEventListener('submit', event => { event.preventDefault(); postDiagnostic('/api/tools/port', {target:$('port-target').value, port:Number($('port-number').value), timeout:Number($('port-timeout').value)}, 'port-result', $('port-form').querySelector('button')); });
+$('ipv6-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const output = $('ipv6-result');
+  const button = event.target.querySelector('button');
+  button.disabled = true; output.textContent = 'Inspecting…';
+  try {
+    const response = await fetch('/api/tools/ipv6', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target:$('ipv6-target').value})});
+    output.textContent = renderIpv6Report(await readJson(response));
+  } catch (error) {
+    output.textContent = `Error: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});

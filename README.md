@@ -72,3 +72,5 @@ uv run pytest
 The **Diagnostic** tab offers a bounded ping, a traceroute/tracepath and a TCP connection test. These operations intentionally generate network traffic, but do not modify any local configuration. The kernel's chosen route is queried with `ip route get`.
 
 The TCP test reports the result actually observed; it does not claim to identify the responsible firewall rule on its own. A timeout may have several causes. The traceroute uses `tracepath` when available, otherwise `traceroute`.
+
+The **IPv6 address inspector** is different: it parses one IPv6 address locally with Python's `ipaddress` module. It reports the address type, scope, optional prefix and the important header flags. It sends no packet and contacts no remote host.

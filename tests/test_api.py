@@ -27,6 +27,23 @@ def test_ping_endpoint_returns_probe_result(monkeypatch):
     assert response.json()["target"] == "192.0.2.10"
 
 
+def test_ipv6_endpoint_describes_address_locally():
+    response = client.post("/api/tools/ipv6", json={"target": "fe80::1%eth0"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["type"] == "Link-local unicast"
+    assert data["zone"] == "eth0"
+    assert data["properties"]["link_local"] is True
+
+
+def test_ipv6_endpoint_rejects_ipv4():
+    response = client.post("/api/tools/ipv6", json={"target": "192.0.2.10"})
+
+    assert response.status_code == 400
+    assert "IPv6" in response.json()["detail"]
+
+
 def test_tools_are_rate_limited(monkeypatch):
     monkeypatch.setattr(routes, "run_ping", _fake_ping)
 

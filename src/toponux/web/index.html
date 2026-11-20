@@ -87,6 +87,11 @@
         <form id="port-form" class="tool-form"><label>Destination<input id="port-target" required maxlength="253" placeholder="192.0.2.10 or server.local"></label><label>TCP port<input id="port-number" type="number" min="1" max="65535" value="443" required></label><label>Timeout (seconds)<input id="port-timeout" type="number" min="0.5" max="5" step="0.5" value="2"></label><button type="submit">Test port</button></form>
         <pre id="port-result" class="tool-result">No test run yet.</pre>
       </section>
+      <section class="panel tool-card">
+        <h2>IPv6 address inspector</h2><p>Local analysis only: address type, scope, prefix and header flags. No packet is sent and no remote host is contacted.</p>
+        <form id="ipv6-form" class="tool-form"><label>IPv6 address<input id="ipv6-target" required maxlength="253" placeholder="fe80::1%eth0 or 2001:db8::1/64"></label><button type="submit">Inspect</button></form>
+        <pre id="ipv6-result" class="tool-result">Enter an IPv6 address.</pre>
+      </section>
       <section class="panel tool-note"><h2>About network probes</h2><ul><li>These tools are active probes: ping, traceroute and TCP connections send packets.</li><li>They do not modify any address, route, firewall rule or system configuration.</li><li>An incomplete traceroute may simply mean that some routers do not answer probes.</li><li>A successful TCP test proves the connection is possible from this machine, not which rule allowed it.</li><li>A timeout alone does not prove a local firewall block.</li></ul></section>
     </section>
 
@@ -164,6 +169,12 @@
               <td>Active TCP connection attempt. Proves reachability from this machine, not which rule allowed it.</td>
             </tr>
             <tr>
+              <td><strong>IPv6 inspector</strong><small>Network tools tab</small></td>
+              <td>Python <code>ipaddress</code> (local computation)</td>
+              <td>Address type, scope, prefix, binary header flags</td>
+              <td>No command and no packet: the address is parsed locally. Accepts one address with an optional <code>/prefix</code> and zone, for example <code>fe80::1%eth0</code>.</td>
+            </tr>
+            <tr>
               <td><strong>Route lookup</strong><small>Network tools tab</small></td>
               <td><code>ip route get &lt;target&gt;</code></td>
               <td>Selected local route</td>
@@ -179,7 +190,7 @@
         <li>Commands run without a shell, with a fixed argument list and a 10-second timeout. No user input is ever passed to the collectors.</li>
         <li>Data is collected only when you press <strong>Refresh</strong> or load the page. There is no background polling and no persistence.</li>
         <li>Nothing leaves the machine: no analytics, no external API, no CDN. Cytoscape is vendored and served locally.</li>
-        <li>Collectors do not resolve hostnames and do not send packets. Only the diagnostic tools send traffic, and they are capped at 10 requests per minute per client.</li>
+        <li>Collectors do not resolve hostnames and do not send packets. Only the active probes (ping, traceroute, TCP test) send traffic, and they are capped at 10 requests per minute per client. The IPv6 inspector is purely local.</li>
       </ul>
 
       <h2 class="subheading">Permissions</h2>

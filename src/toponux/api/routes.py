@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 from toponux.analyzers.firewall import normalize_firewall
 from toponux.analyzers.topology import build_graph
-from toponux.collectors.diagnostics import run_ping, run_trace, test_tcp_port
+from toponux.collectors.diagnostics import inspect_ipv6, run_ping, run_trace, test_tcp_port
 from toponux.collectors.firewall import collect_firewall
 from toponux.collectors.interfaces import collect_interfaces
 from toponux.collectors.neighbors import collect_neighbors
@@ -111,5 +111,14 @@ def api_port(payload: PortRequest, request: Request):
     _check_rate_limit(_client_id(request))
     try:
         return test_tcp_port(payload.target, payload.port, payload.timeout)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/api/tools/ipv6")
+def api_ipv6(payload: TargetRequest):
+    """Describe an IPv6 address from local computation only. No packet is sent."""
+    try:
+        return inspect_ipv6(payload.target)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

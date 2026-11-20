@@ -20,6 +20,25 @@ const graphStyle = [
 function countRules(rules = {}) { return (Array.isArray(rules.ipv4) ? rules.ipv4.length : 0) + (Array.isArray(rules.ipv6) ? rules.ipv6.length : 0); }
 function allRoutes() { return Object.entries(snapshot.routes || {}).flatMap(([family, routes]) => (Array.isArray(routes) ? routes : []).map(route => ({ family, ...route }))); }
 function interfaceAddresses(iface) { return (iface.addr_info || []).map(a => `${a.local}/${a.prefixlen}`); }
+function formatBytes(value) {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let amount = Number(value);
+  let unit = 0;
+  while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit += 1; }
+  return `${amount.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+}
+function interfaceTraffic(iface) {
+  const stats = iface.stats || {};
+  return `↓ ${formatBytes(stats.rx_bytes)}<br>↑ ${formatBytes(stats.tx_bytes)}`;
+}
+function interfaceHealth(iface) {
+  const stats = iface.stats || {};
+  const errors = (stats.rx_errors || 0) + (stats.tx_errors || 0);
+  const dropped = (stats.rx_dropped || 0) + (stats.tx_dropped || 0);
+  if (!errors && !dropped) return '—';
+  return `${errors} errors<br>${dropped} dropped`;
+}
 function interfaceHaystack(iface) {
   return [iface.ifname, iface.link_type, iface.operstate, iface.master, iface.mtu, ...interfaceAddresses(iface)]
     .filter(value => value != null).join(' ').toLowerCase();
@@ -57,7 +76,7 @@ function renderGraph() {
 function renderInterfaces() {
   const filter = $('interface-filter').value.trim().toLowerCase();
   const rows = (snapshot.interfaces || []).filter(i => !filter || interfaceHaystack(i).includes(filter));
-  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml(i.link_type || '—')}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No matching interface.</td></tr>';
+  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml(i.link_type || '—')}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${interfaceTraffic(i)}</td><td>${interfaceHealth(i)}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No matching interface.</td></tr>';
 }
 function renderRoutes() {
   const filter = $('route-filter').value.trim().toLowerCase();

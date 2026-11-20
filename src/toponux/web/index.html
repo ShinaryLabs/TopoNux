@@ -46,7 +46,7 @@
 
     <section id="tab-interfaces" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-interfaces">
       <div class="table-toolbar"><div><h2>Network interfaces</h2><p>Full inventory, including DOWN and veth interfaces.</p></div><input id="interface-filter" type="search" placeholder="Filter interfaces…"></div>
-      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>Traffic</th><th>Errors</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
     </section>
 
     <section id="tab-routes" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-routes">
@@ -99,9 +99,9 @@
           <tbody>
             <tr>
               <td><strong>Interfaces</strong><small>Interfaces tab</small></td>
-              <td><code>ip -j address show</code></td>
-              <td><code>ifname</code>, <code>operstate</code>, <code>mtu</code>, <code>address</code>, <code>link_type</code>, <code>master</code>, <code>addr_info[]</code></td>
-              <td>Includes DOWN and veth interfaces. <code>-j</code> gives stable JSON instead of locale-dependent text.</td>
+              <td><code>ip -j address show</code><br><code>/sys/class/net/&lt;iface&gt;/statistics/*</code></td>
+              <td><code>ifname</code>, <code>operstate</code>, <code>mtu</code>, <code>address</code>, <code>link_type</code>, <code>master</code>, <code>addr_info[]</code>, <code>stats{rx_bytes,tx_bytes,rx_errors,tx_errors,rx_dropped,tx_dropped}</code></td>
+              <td>Includes DOWN and veth interfaces. <code>-j</code> gives stable JSON instead of locale-dependent text. Traffic counters are cumulative since boot and read from the kernel; missing or unreadable counters report <code>0</code>.</td>
             </tr>
             <tr>
               <td><strong>Neighbours</strong><small>Overview graph</small></td>

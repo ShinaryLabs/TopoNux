@@ -88,6 +88,15 @@ function renderGraph() {
   cy.on('tap', 'node', event => showDetails(event.target.data()));
   cy.on('tap', event => { if (event.target === cy) { $('detail-hint').textContent = 'Select an element in the graph.'; $('details').textContent = 'Nothing selected.'; } });
 }
+function renderNeighbors() {
+  const filter = ($('neighbor-filter')?.value || '').trim().toLowerCase();
+  const rows = (snapshot.neighbors_view || []).filter(n => {
+    if (!filter) return true;
+    const haystack = [n.mac, n.oui, n.vendor, n.interface, n.state, ...(n.addresses || [])].join(' ').toLowerCase();
+    return haystack.includes(filter);
+  });
+  $('neighbors-body').innerHTML = rows.map(n => `<tr><td><strong>${escapeHtml(n.mac)}</strong></td><td>${escapeHtml(n.vendor)}<small>${escapeHtml(n.oui)}</small></td><td>${escapeHtml(n.interface)}${n.docker ? ' <small>Docker</small>' : ''}</td><td>${escapeHtml(n.state)}</td><td>${(n.addresses || []).map(escapeHtml).join('<br>') || '—'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No neighbour entries.</td></tr>';
+}
 function renderInterfaces() {
   const filter = $('interface-filter').value.trim().toLowerCase();
   const l2 = l2Index();
@@ -337,7 +346,7 @@ function renderSnapshot() {
   $('footer-time').textContent = new Date(snapshot.collected_at).toLocaleTimeString();
   $('errors').textContent = Object.keys(snapshot.errors || {}).length ? JSON.stringify(snapshot.errors, null, 2) : 'No errors reported.';
   $('raw-json').textContent = JSON.stringify(snapshot, null, 2);
-  renderFirewall(); renderInterfaces(); renderRoutes(); renderGraph();
+  renderFirewall(); renderInterfaces(); renderNeighbors(); renderRoutes(); renderGraph();
 }
 let activeDiagnostic = null;
 
@@ -369,6 +378,7 @@ document.querySelectorAll('.tab').forEach(button => button.addEventListener('cli
   if (button.dataset.tab === 'firewall' && fwCy) { fwCy.resize(); fwCy.fit(undefined, 30); }
 }));
 $('interface-filter').addEventListener('input', renderInterfaces);
+$('neighbor-filter').addEventListener('input', renderNeighbors);
 $('route-filter').addEventListener('input', renderRoutes);
 $('firewall-filter').addEventListener('input', event => {
   fwFilter = event.target.value.trim().toLowerCase();

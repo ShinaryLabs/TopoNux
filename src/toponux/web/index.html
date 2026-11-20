@@ -22,6 +22,7 @@
     <nav class="tabs" role="tablist" aria-label="Toponux views">
       <button class="tab active" id="tab-btn-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="tab-overview">Overview</button>
       <button class="tab" id="tab-btn-interfaces" data-tab="interfaces" role="tab" aria-selected="false" aria-controls="tab-interfaces">Interfaces</button>
+      <button class="tab" id="tab-btn-neighbors" data-tab="neighbors" role="tab" aria-selected="false" aria-controls="tab-neighbors">Neighbours</button>
       <button class="tab" id="tab-btn-routes" data-tab="routes" role="tab" aria-selected="false" aria-controls="tab-routes">Routing</button>
       <button class="tab" id="tab-btn-firewall" data-tab="firewall" role="tab" aria-selected="false" aria-controls="tab-firewall">Firewall</button>
       <button class="tab" id="tab-btn-diagnostics" data-tab="diagnostics" role="tab" aria-selected="false" aria-controls="tab-diagnostics">Network tools</button>
@@ -49,6 +50,10 @@
       <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>Traffic</th><th>Errors</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
     </section>
 
+    <section id="tab-neighbors" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-neighbors">
+      <div class="table-toolbar"><div><h2>Neighbours (ARP/NDP)</h2><p>Grouped by MAC and interface. Vendor comes from a local OUI database when available; no network probe is sent.</p></div><input id="neighbor-filter" type="search" placeholder="Filter MAC, vendor, interface, address…"></div>
+      <div class="table-wrap"><table><thead><tr><th>MAC address</th><th>OUI / vendor</th><th>Interface</th><th>State</th><th>Addresses</th></tr></thead><tbody id="neighbors-body"></tbody></table></div>
+    </section>
     <section id="tab-routes" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-routes">
       <div class="table-toolbar"><div><h2>Routing tables</h2><p>IPv4 and IPv6 routes, including local and special entries.</p></div><input id="route-filter" type="search" placeholder="Filter destination, interface, gateway…"></div>
       <div class="table-wrap"><table><thead><tr><th>Family</th><th>Destination</th><th>Gateway</th><th>Interface</th><th>Table</th><th>Type / state</th><th>Metric</th></tr></thead><tbody id="routes-body"></tbody></table></div>
@@ -113,6 +118,12 @@
               <td><code>ip -j neigh show</code></td>
               <td><code>dst</code>, <code>dev</code>, <code>lladdr</code>, <code>state[]</code></td>
               <td>ARP (IPv4) and NDP (IPv6) cache. Recent peers only, not a full LAN inventory. Entries without a MAC and <code>lo</code>/<code>veth</code> devices are skipped. Grouped per device and MAC.</td>
+            </tr>
+            <tr>
+              <td><strong>Neighbour view</strong><small>Neighbours tab</small></td>
+              <td>Derived from <code>ip -j neigh show</code> plus local OUI files</td>
+              <td><code>mac</code>, <code>interface</code>, <code>state</code>, <code>addresses</code>, <code>vendor</code></td>
+              <td>Groups ARP/NDP entries by MAC and interface. Vendor lookup uses <code>/usr/share/ieee-data/oui.txt</code> (or equivalent) when installed; otherwise it reports <code>Unknown</code> or <code>Locally administered</code>.</td>
             </tr>
             <tr>
               <td><strong>IPv4 routes</strong><small>Routing tab</small></td>

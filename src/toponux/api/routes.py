@@ -10,6 +10,7 @@ from toponux.analyzers.topology import build_graph
 from toponux.collectors.diagnostics import inspect_ipv6, run_ping, run_trace, test_tcp_port
 from toponux.collectors.firewall import collect_firewall
 from toponux.collectors.interfaces import collect_interfaces
+from toponux.collectors.l2 import collect_l2
 from toponux.collectors.neighbors import collect_neighbors
 from toponux.collectors.routes import collect_routes
 from toponux.collectors.rules import collect_policy_rules
@@ -19,6 +20,7 @@ router = APIRouter()
 
 COLLECTORS = {
     "interfaces": collect_interfaces,
+    "l2": collect_l2,
     "neighbors": collect_neighbors,
     "routes": collect_routes,
     "policy_rules": collect_policy_rules,

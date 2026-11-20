@@ -11,6 +11,10 @@
   --graph-interface-bg: #1d4ed8;
   --graph-bridge-bg: #047857;
   --graph-bridge-border: #34d399;
+  --graph-bond-bg: #5b21b6;
+  --graph-bond-border: #a78bfa;
+  --graph-vlan-bg: #9d174d;
+  --graph-vlan-border: #f472b6;
   --graph-gateway-bg: #92400e;
   --graph-gateway-border: #fbbf24;
   --graph-neighbor-bg: #0f766e;
@@ -191,6 +195,12 @@ main {
 }
 .bridge {
   background: #059669;
+}
+.bond {
+  background: #7c3aed;
+}
+.vlan {
+  background: #db2777;
 }
 .gateway {
   background: #d97706;

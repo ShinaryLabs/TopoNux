@@ -107,6 +107,29 @@ def test_interfaces_collector_enriches_with_kernel_statistics(monkeypatch, tmp_p
     assert "stats" not in result[2]
 
 
+def test_l2_collector_reports_command_failures_without_hiding_success(monkeypatch):
+    from toponux.collectors import l2
+
+    captured = []
+
+    def fake_run_json(command):
+        captured.append(command)
+        if command == ["bridge", "-j", "link", "show"]:
+            raise RuntimeError("bridge: command not found")
+        if command == ["ip", "-j", "-d", "link", "show"]:
+            return [{"ifname": "eth0", "master": "br0", "linkinfo": {"info_kind": "bridge_slave"}}]
+        return []
+
+    monkeypatch.setattr(l2, "run_json", fake_run_json)
+
+    result = l2.collect_l2()
+
+    assert result["links"] == [{"ifname": "eth0", "master": "br0", "linkinfo": {"info_kind": "bridge_slave"}}]
+    assert result["bridge_links"] == []
+    assert result["bridge_vlans"] == []
+    assert "bridge_links" in result["errors"]
+
+
 def test_neighbors_collector_reads_the_kernel_neighbour_table(monkeypatch):
     from toponux.collectors import neighbors
 

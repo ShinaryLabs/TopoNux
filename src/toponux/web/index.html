@@ -31,13 +31,13 @@
     <section id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
       <div class="overview-grid">
         <section class="panel graph-panel">
-          <div class="panel-heading"><div><h2>Network topology</h2><p>Simplified view: local machine, active interfaces, virtual networks, default gateways and ARP/NDP neighbours.</p></div><span id="timestamp"></span></div>
+          <div class="panel-heading"><div><h2>Network topology</h2><p>Simplified view: local machine, active interfaces, bridges, bonds, VLAN devices, default gateways and ARP/NDP neighbours.</p></div><span id="timestamp"></span></div>
           <div class="graph-options" role="group" aria-label="Graph filters">
             <label class="graph-toggle"><input type="checkbox" id="graph-ipv6"> Show IPv6 neighbours</label>
             <label class="graph-toggle"><input type="checkbox" id="graph-docker"> Show Docker containers</label>
           </div>
           <div id="cy"></div>
-          <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / virtual network</span><span><i class="dot gateway"></i>Gateway</span><span><i class="dot neighbor"></i>Neighbour (ARP/NDP)</span></div>
+          <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / virtual network</span><span><i class="dot bond"></i>Bond</span><span><i class="dot vlan"></i>VLAN</span><span><i class="dot gateway"></i>Gateway</span><span><i class="dot neighbor"></i>Neighbour (ARP/NDP)</span></div>
         </section>
         <aside class="panel details"><h2>Details</h2><p id="detail-hint">Select an element in the graph.</p><pre id="details">Nothing selected.</pre><h2>Collection state</h2><pre id="errors">No errors reported.</pre></aside>
       </div>
@@ -143,6 +143,12 @@
               <td><code>nft -j list ruleset</code><br>fallback: <code>iptables-save</code>, <code>ip6tables-save</code></td>
               <td>Tables, chains, hooks, policies, rules, matches, counters, verdicts</td>
               <td>nftables JSON is preferred. Text iptables output is parsed best-effort. Reading nftables often needs root or <code>CAP_NET_ADMIN</code>; without it the tab shows a warning and the other views keep working.</td>
+            </tr>
+            <tr>
+              <td><strong>Layer 2 links</strong><small>Interfaces and Overview</small></td>
+              <td><code>ip -j -d link show</code><br><code>bridge -j link show</code><br><code>bridge -j vlan show</code></td>
+              <td><code>linkinfo.info_kind</code>, <code>info_data</code>, <code>master</code>, bridge port state, bridge VLAN lists</td>
+              <td>Detects bridges, bonds and VLAN devices (<code>eth0.10</code>). Bridge data may need <code>CAP_NET_ADMIN</code>; a missing <code>bridge</code> command is reported without hiding the rest.</td>
             </tr>
             <tr>
               <td><strong>Topology graph</strong><small>Overview tab</small></td>

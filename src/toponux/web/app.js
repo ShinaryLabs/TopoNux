@@ -10,6 +10,8 @@ const graphStyle = [
   { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
   { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-host-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bridge"]', style: { 'background-color': cssVar('--graph-bridge-bg'), 'border-color': cssVar('--graph-bridge-border'), shape: 'round-rectangle' } },
+  { selector: 'node[kind="bond"]', style: { 'background-color': cssVar('--graph-bond-bg'), 'border-color': cssVar('--graph-bond-border'), shape: 'hexagon' } },
+  { selector: 'node[kind="vlan"]', style: { 'background-color': cssVar('--graph-vlan-bg'), 'border-color': cssVar('--graph-vlan-border'), 'border-style': 'dashed', shape: 'round-rectangle' } },
   { selector: 'node[kind="gateway"]', style: { 'background-color': cssVar('--graph-gateway-bg'), 'border-color': cssVar('--graph-gateway-border'), shape: 'diamond', width: 130, height: 90 } },
   { selector: 'node[kind="neighbor"]', style: { 'background-color': cssVar('--graph-neighbor-bg'), 'border-color': cssVar('--graph-neighbor-border'), shape: 'ellipse', width: 126, height: 46, 'font-size': 10 } },
   { selector: 'node[kind="neighbor"][?docker]', style: { 'border-style': 'dashed' } },
@@ -43,6 +45,19 @@ function interfaceHaystack(iface) {
   return [iface.ifname, iface.link_type, iface.operstate, iface.master, iface.mtu, ...interfaceAddresses(iface)]
     .filter(value => value != null).join(' ').toLowerCase();
 }
+function l2Index() {
+  const links = snapshot.l2 && Array.isArray(snapshot.l2.links) ? snapshot.l2.links : [];
+  return Object.fromEntries(links.filter(link => link.ifname).map(link => [link.ifname, link]));
+}
+function l2Label(iface, index = l2Index()) {
+  const link = index[iface.ifname] || iface;
+  const info = link.linkinfo || {};
+  const data = info.info_data || {};
+  if (info.info_kind === 'vlan') return `vlan ${data.id ?? '?'} on ${data.link || '?'}`;
+  if (info.info_kind === 'bond') return `bond ${data.mode || ''}`.trim();
+  if (info.info_kind === 'bridge') return 'bridge';
+  return iface.master ? `master ${iface.master}` : '';
+}
 function routeHaystack(route) {
   const { family, dst, gateway, dev, table, type, scope, metric, flags } = route;
   return [family, dst, gateway, dev, table, type, scope, metric, ...(Array.isArray(flags) ? flags : [])]
@@ -75,8 +90,9 @@ function renderGraph() {
 }
 function renderInterfaces() {
   const filter = $('interface-filter').value.trim().toLowerCase();
-  const rows = (snapshot.interfaces || []).filter(i => !filter || interfaceHaystack(i).includes(filter));
-  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml(i.link_type || '—')}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${interfaceTraffic(i)}</td><td>${interfaceHealth(i)}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No matching interface.</td></tr>';
+  const l2 = l2Index();
+  const rows = (snapshot.interfaces || []).filter(i => !filter || interfaceHaystack(i).includes(filter) || l2Label(i, l2).toLowerCase().includes(filter));
+  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml([i.link_type, l2Label(i, l2)].filter(Boolean).join(' · '))}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${interfaceTraffic(i)}</td><td>${interfaceHealth(i)}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No matching interface.</td></tr>';
 }
 function renderRoutes() {
   const filter = $('route-filter').value.trim().toLowerCase();

@@ -41,7 +41,7 @@ toponux --host 0.0.0.0 --allow-remote
 
 ## Views
 
-- **Global view**: local machine, main IP interfaces, active virtual bridges and default gateways.
+- **Global view**: local machine, main IP interfaces, bridges, bonds, VLAN devices and default gateways.
 - **Interfaces**: full inventory, including loopback, veth and DOWN interfaces.
 - **Routing**: all IPv4/IPv6 routes and policy routing rules.
 - **Firewall**: collection status and available rules.

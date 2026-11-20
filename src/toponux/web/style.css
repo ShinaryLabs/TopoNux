@@ -582,6 +582,67 @@ footer {
   font-size: 15px;
   margin-right: 3px;
 }
+.fw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.fw-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.fw-analytics {
+  margin-top: 12px;
+}
+.fw-analytics h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.fw-rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.fw-rule-list li {
+  background: #0b1220;
+  border: 1px solid #263449;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+.fw-rule-list small {
+  color: #94a3b8;
+}
+.fw-sets {
+  display: grid;
+  gap: 8px;
+}
+.fw-set {
+  background: #0b1220;
+  border: 1px solid #263449;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.fw-set strong {
+  color: #e2e8f0;
+}
+.fw-set span {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.fw-set p {
+  margin: 6px 0 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  word-break: break-word;
+}
 .fw-toolbar {
   display: flex;
   flex-wrap: wrap;

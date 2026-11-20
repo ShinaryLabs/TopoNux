@@ -81,11 +81,25 @@ def normalize_firewall(raw: dict[str, Any] | None = None) -> dict[str, Any]:
             tables.extend(_tables_from_iptables(str(text), family, warnings))
 
     totals = _finalize(tables, warnings)
+    sets = [item for table in tables for item in table.get("sets", [])]
+    maps = [item for table in tables for item in table.get("maps", [])]
+    if backend == "nftables":
+        for table in tables:
+            table["command"] = f"nft -j list table {table['family']} {table['name']}"
+    elif backend == "iptables":
+        for table in tables:
+            table["command"] = "iptables-save" if table["family"] == "ip" else "ip6tables-save"
+    command = "nft -j list ruleset" if backend == "nftables" else ("iptables-save" if backend == "iptables" else None)
+    analytics = _firewall_analytics(tables, backend, command)
     return {
         "backend": backend,
         "available": bool(tables) and backend in {"nftables", "iptables"},
         "tables": tables,
+        "sets": sets,
+        "maps": maps,
         "totals": totals,
+        "analytics": analytics,
+        "command": command,
         "warnings": warnings,
     }
 
@@ -98,7 +112,7 @@ def normalize_firewall(raw: dict[str, Any] | None = None) -> dict[str, Any]:
 def _new_table(store: dict[tuple[str, str], dict[str, Any]], family: str, name: str) -> dict[str, Any]:
     key = (family, name)
     if key not in store:
-        store[key] = {"family": family, "name": name, "chains": {}, "stats": {}}
+        store[key] = {"family": family, "name": name, "chains": {}, "sets": [], "maps": [], "stats": {}}
     return store[key]
 
 
@@ -160,6 +174,14 @@ def _tables_from_nft(items: list[Any], warnings: list[str]) -> list[dict[str, An
                 chain["rules"].append(_nft_rule(spec))
             except (TypeError, ValueError, AttributeError) as exc:
                 warnings.append(f"unparsed nft rule {spec.get('handle', '?')}: {exc}")
+        elif "set" in item:
+            spec = item["set"]
+            table = _new_table(store, str(spec.get("family", "ip")), str(spec.get("table", "?")))
+            table["sets"].append(_nft_set(spec))
+        elif "map" in item:
+            spec = item["map"]
+            table = _new_table(store, str(spec.get("family", "ip")), str(spec.get("table", "?")))
+            table["maps"].append(_nft_map(spec))
     return list(store.values())
 
 
@@ -218,6 +240,92 @@ def _nft_rule(spec: dict[str, Any]) -> dict[str, Any]:
         "matches": _dedupe(matches),
         "counter": counter,
     }
+
+
+def _nft_set(spec: dict[str, Any]) -> dict[str, Any]:
+    elements = _nft_elements(spec)
+    return {
+        "kind": "set",
+        "family": str(spec.get("family", "ip")),
+        "table": str(spec.get("table", "?")),
+        "name": str(spec.get("name", "?")),
+        "handle": spec.get("handle"),
+        "type": spec.get("type"),
+        "flags": spec.get("flags") or [],
+        "elements": elements,
+        "size": len(elements),
+        "command": f"nft -j list set {spec.get('family', 'ip')} {spec.get('table', '?')} {spec.get('name', '?')}",
+    }
+
+
+def _nft_map(spec: dict[str, Any]) -> dict[str, Any]:
+    elements = _nft_elements(spec)
+    return {
+        "kind": "map",
+        "family": str(spec.get("family", "ip")),
+        "table": str(spec.get("table", "?")),
+        "name": str(spec.get("name", "?")),
+        "handle": spec.get("handle"),
+        "type": spec.get("type"),
+        "map_type": spec.get("map"),
+        "flags": spec.get("flags") or [],
+        "elements": elements,
+        "size": len(elements),
+        "command": f"nft -j list map {spec.get('family', 'ip')} {spec.get('table', '?')} {spec.get('name', '?')}",
+    }
+
+
+def _nft_elements(spec: dict[str, Any]) -> list[Any]:
+    raw = spec.get("elem")
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raw = [raw]
+    elements: list[Any] = []
+    for item in raw:
+        if isinstance(item, dict) and "elem" in item:
+            elem = item["elem"]
+            if isinstance(elem, dict):
+                if "key" in elem and "val" in elem:
+                    elements.append({"key": _scalar(elem["key"]), "value": _scalar(elem["val"])})
+                elif "val" in elem:
+                    elements.append(_scalar(elem["val"]))
+                else:
+                    elements.append({key: _scalar(value) for key, value in elem.items()})
+            else:
+                elements.append(_scalar(elem))
+        elif isinstance(item, dict):
+            if "key" in item and "val" in item:
+                elements.append({"key": _scalar(item["key"]), "value": _scalar(item["val"])})
+            else:
+                elements.append({key: _scalar(value) for key, value in item.items()})
+        else:
+            elements.append(_scalar(item))
+    return elements
+
+
+def _scalar(value: Any) -> str:
+    if isinstance(value, dict):
+        if "prefix" in value:
+            prefix = value["prefix"] or {}
+            return f"{_scalar(prefix.get('addr', '?'))}/{prefix.get('len', '?')}"
+        if "range" in value:
+            bounds = value["range"] or []
+            if len(bounds) >= 2:
+                return f"{_scalar(bounds[0])}-{_scalar(bounds[-1])}"
+            return ", ".join(_scalar(item) for item in bounds)
+        if "set" in value:
+            return ", ".join(_scalar(item) for item in value["set"] or [])
+        if "quoted" in value:
+            return str(value["quoted"])
+        if "proto" in value:
+            return str(value["proto"])
+        return " ".join(f"{key} {_scalar(item)}" for key, item in value.items())
+    if isinstance(value, list):
+        return ", ".join(_scalar(item) for item in value)
+    if value is True:
+        return ""
+    return str(value)
 
 
 def _nft_match(spec: dict[str, Any]) -> str:
@@ -424,6 +532,50 @@ def _finalize(tables: list[dict[str, Any]], warnings: list[str]) -> dict[str, in
             "by_verdict": {key: value for key, value in table_counts.items() if key != "rules" and value},
         }
     return totals
+
+
+def _firewall_analytics(tables: list[dict[str, Any]], backend: str, command: str | None) -> dict[str, Any]:
+    zero_counter_rules: list[dict[str, Any]] = []
+    uncounted_rules: list[dict[str, Any]] = []
+    uncommented_rules: list[dict[str, Any]] = []
+
+    for table in tables:
+        for chain in table["chains"]:
+            for rule in chain["rules"]:
+                counter = rule.get("counter")
+                location = {
+                    "table": table["name"],
+                    "family": table["family"],
+                    "chain": chain["name"],
+                    "handle": rule.get("handle"),
+                    "verdict": rule.get("verdict"),
+                    "target": rule.get("target"),
+                    "matches": [match.get("text") for match in rule.get("matches", []) if match.get("text")],
+                    "comment": rule.get("comment"),
+                    "counter": counter,
+                    "command": table.get("command"),
+                }
+                if isinstance(counter, dict) and counter.get("packets", 0) == 0 and counter.get("bytes", 0) == 0:
+                    zero_counter_rules.append(location)
+                if counter is None:
+                    uncounted_rules.append(location)
+                if not rule.get("comment"):
+                    uncommented_rules.append(location)
+
+    return {
+        "backend": backend,
+        "command": command,
+        "zero_counter_rules": zero_counter_rules,
+        "uncounted_rules": uncounted_rules,
+        "uncommented_rules": uncommented_rules,
+        "counts": {
+            "zero_counter": len(zero_counter_rules),
+            "uncounted": len(uncounted_rules),
+            "uncommented": len(uncommented_rules),
+            "sets": sum(len(table.get("sets", [])) for table in tables),
+            "maps": sum(len(table.get("maps", [])) for table in tables),
+        },
+    }
 
 
 def _classify_rules(chain: dict[str, Any], chain_names: set[str], warnings: list[str]) -> None:

@@ -448,7 +448,51 @@ async function postDiagnostic(path, payload, outputId, button) {
     if (activeDiagnostic === controller) activeDiagnostic = null;
   }
 }
-$('run-ping').addEventListener('click', () => postDiagnostic('/api/tools/ping', {target:$('path-target').value, count:Number($('ping-count').value)}, 'path-result', $('run-ping')));
+function downloadText(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function firewallRulesCsv(view) {
+  const rows = [['table', 'family', 'chain', 'handle', 'verdict', 'target', 'matches', 'comment', 'packets', 'bytes']];
+  for (const table of view.tables || []) {
+    for (const chain of table.chains || []) {
+      for (const rule of chain.rules || []) {
+        const counter = rule.counter || {};
+        rows.push([
+          table.name, table.family, chain.name, rule.handle ?? '', rule.verdict || '', rule.target || '',
+          (rule.matches || []).map(match => match.text).join('; '), rule.comment || '',
+          counter.packets ?? '', counter.bytes ?? '',
+        ]);
+      }
+    }
+  }
+  return rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+}
+
+$('fw-copy-command').addEventListener('click', async () => {
+  const view = snapshot.firewall_view || {};
+  const command = view.command || (view.backend === 'iptables' ? 'iptables-save' : 'nft -j list ruleset');
+  try {
+    await navigator.clipboard.writeText(command);
+    $('firewall-message').textContent = `Copied: ${command}`;
+  } catch (error) {
+    $('firewall-message').textContent = command;
+  }
+});
+$('fw-export-json').addEventListener('click', () => {
+  downloadText('toponux-firewall.json', JSON.stringify(snapshot.firewall_view || {}, null, 2), 'application/json');
+});
+$('fw-export-csv').addEventListener('click', () => {
+  downloadText('toponux-firewall.csv', firewallRulesCsv(snapshot.firewall_view || {}), 'text/csv');
+});
 $('run-trace').addEventListener('click', () => postDiagnostic('/api/tools/trace', {target:$('path-target').value, max_hops:Number($('trace-hops').value)}, 'path-result', $('run-trace')));
 $('port-form').addEventListener('submit', event => { event.preventDefault(); postDiagnostic('/api/tools/port', {target:$('port-target').value, port:Number($('port-number').value), timeout:Number($('port-timeout').value)}, 'port-result', $('port-form').querySelector('button')); });
 $('ipv6-form').addEventListener('submit', async event => {

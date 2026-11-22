@@ -97,6 +97,32 @@ function renderNeighbors() {
   });
   $('neighbors-body').innerHTML = rows.map(n => `<tr><td><strong>${escapeHtml(n.mac)}</strong></td><td>${escapeHtml(n.vendor)}<small>${escapeHtml(n.oui)}</small></td><td>${escapeHtml(n.interface)}${n.docker ? ' <small>Docker</small>' : ''}</td><td>${escapeHtml(n.state)}</td><td>${(n.addresses || []).map(escapeHtml).join('<br>') || '—'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No neighbour entries.</td></tr>';
 }
+function socketProcesses(item) {
+  return (item.processes || []).map(process => `${process.name} (${process.pid})`).join(', ') || '—';
+}
+function socketEndpoint(item, addressKey, portKey) {
+  const port = item[portKey];
+  return `${item[addressKey] || '—'}${port == null ? '' : `:${port}`}`;
+}
+function socketHaystack(item) {
+  return [item.protocol, item.state, item.local_address, item.local_port, item.peer_address, item.peer_port, ...(item.processes || []).flatMap(process => [process.name, process.pid])]
+    .filter(value => value != null).join(' ').toLowerCase();
+}
+function renderPorts() {
+  const view = snapshot.sockets_view || { available: false, listeners: [], connections: [], error: 'Socket inventory unavailable.' };
+  const message = $('ports-message');
+  if (!view.available) {
+    message.textContent = `Socket inventory unavailable: ${view.error || 'ss could not be read.'}`;
+  } else {
+    message.textContent = `${(view.listeners || []).length} listening socket(s) · ${(view.connections || []).length} established connection(s) to remote peers.`;
+  }
+  const listenerFilter = $('listener-filter').value.trim().toLowerCase();
+  const connectionFilter = $('connection-filter').value.trim().toLowerCase();
+  const listeners = (view.listeners || []).filter(item => !listenerFilter || socketHaystack(item).includes(listenerFilter));
+  const connections = (view.connections || []).filter(item => !connectionFilter || socketHaystack(item).includes(connectionFilter));
+  $('listeners-body').innerHTML = listeners.map(item => `<tr><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(item.local_address)}</td><td>${escapeHtml(item.local_port ?? '—')}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No listening socket.</td></tr>';
+  $('connections-body').innerHTML = connections.map(item => `<tr><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(item.state)}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No established connection to a remote peer.</td></tr>';
+}
 function renderInterfaces() {
   const filter = $('interface-filter').value.trim().toLowerCase();
   const l2 = l2Index();
@@ -346,7 +372,7 @@ function renderSnapshot() {
   $('footer-time').textContent = new Date(snapshot.collected_at).toLocaleTimeString();
   $('errors').textContent = Object.keys(snapshot.errors || {}).length ? JSON.stringify(snapshot.errors, null, 2) : 'No errors reported.';
   $('raw-json').textContent = JSON.stringify(snapshot, null, 2);
-  renderFirewall(); renderInterfaces(); renderNeighbors(); renderRoutes(); renderGraph();
+  renderFirewall(); renderInterfaces(); renderNeighbors(); renderPorts(); renderRoutes(); renderGraph();
 }
 let activeDiagnostic = null;
 
@@ -401,6 +427,8 @@ document.querySelectorAll('.tab').forEach(button => button.addEventListener('cli
 }));
 $('interface-filter').addEventListener('input', renderInterfaces);
 $('neighbor-filter').addEventListener('input', renderNeighbors);
+$('listener-filter').addEventListener('input', renderPorts);
+$('connection-filter').addEventListener('input', renderPorts);
 $('route-filter').addEventListener('input', renderRoutes);
 $('firewall-filter').addEventListener('input', event => {
   fwFilter = event.target.value.trim().toLowerCase();

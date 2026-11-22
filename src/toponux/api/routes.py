@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from toponux.analyzers.firewall import normalize_firewall
 from toponux.analyzers.neighbors import normalize_neighbors
+from toponux.analyzers.sockets import normalize_sockets
 from toponux.analyzers.topology import build_graph
 from toponux.collectors.diagnostics import (
     inspect_ipv6,
@@ -21,6 +22,7 @@ from toponux.collectors.l2 import collect_l2
 from toponux.collectors.neighbors import collect_neighbors
 from toponux.collectors.routes import collect_routes
 from toponux.collectors.rules import collect_policy_rules
+from toponux.collectors.sockets import collect_sockets
 from toponux.models.network import collect_snapshot
 
 router = APIRouter()
@@ -31,6 +33,7 @@ COLLECTORS = {
     "neighbors": collect_neighbors,
     "routes": collect_routes,
     "policy_rules": collect_policy_rules,
+    "sockets": collect_sockets,
     "firewall": collect_firewall,
 }
 
@@ -78,6 +81,11 @@ def _client_id(request: Request) -> str:
 def _enrich_snapshot(snapshot: dict) -> dict:
     snapshot["firewall_view"] = normalize_firewall(snapshot.get("firewall"))
     snapshot["neighbors_view"] = normalize_neighbors(snapshot.get("neighbors"))
+    snapshot["sockets_view"] = normalize_sockets(
+        snapshot.get("sockets"),
+        snapshot.get("interfaces"),
+        snapshot.get("errors", {}).get("sockets"),
+    )
     return snapshot
 
 

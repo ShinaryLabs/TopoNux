@@ -286,6 +286,10 @@ pre {
   margin-top: 15px;
   padding: 16px;
 }
+.tab-content.ports-view.active {
+  display: grid;
+  gap: 16px;
+}
 .table-panel {
   padding: 18px;
 }

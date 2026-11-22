@@ -36,13 +36,15 @@
           <div class="graph-options" role="group" aria-label="Graph filters">
             <label class="graph-toggle"><input type="checkbox" id="graph-ipv6"> Show IPv6 neighbours</label>
             <label class="graph-toggle"><input type="checkbox" id="graph-docker"> Show Docker containers</label>
+            <button id="scan-subnet" class="secondary scan-button" type="button" title="Send one ping to every host on the local IPv4 subnets, then refresh the neighbour cache."><span class="spinner" aria-hidden="true"></span><span>Scan subnet</span></button>
+            <span id="scan-status" class="scan-status" role="status" aria-live="polite"></span>
           </div>
           <div id="cy"></div>
           <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / virtual network</span><span><i class="dot bond"></i>Bond</span><span><i class="dot vlan"></i>VLAN</span><span><i class="dot gateway"></i>Gateway</span><span><i class="dot neighbor"></i>Neighbour (ARP/NDP)</span></div>
         </section>
         <aside class="panel details"><h2>Details</h2><p id="detail-hint">Select an element in the graph.</p><pre id="details">Nothing selected.</pre><h2>Collection state</h2><pre id="errors">No errors reported.</pre></aside>
       </div>
-      <section class="panel notes"><h2>Reading the topology</h2><p>Neighbours come from the local ARP/NDP cache, so they are recent peers rather than a full LAN inventory. IPv6 and Docker entries are hidden by default. Local, broadcast and multicast routes are not drawn in this view. veth interfaces are grouped under their bridges. Use the dedicated tabs for the full inventory.</p></section>
+      <section class="panel notes"><h2>Reading the topology</h2><p>Neighbours come from the local ARP/NDP cache, so they are recent peers rather than a full LAN inventory. Use Scan subnet to send one ping to every IPv4 host of the current local subnets and populate that cache. IPv6 and Docker entries are hidden by default. Local, broadcast and multicast routes are not drawn in this view. veth interfaces are grouped under their bridges. Use the dedicated tabs for the full inventory.</p></section>
     </section>
 
     <section id="tab-interfaces" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-interfaces">
@@ -172,6 +174,12 @@
               <td><code>ping -n -c &lt;count&gt; -W 2 -- &lt;target&gt;</code></td>
               <td>Exit code, stdout, stderr</td>
               <td>Active probe: sends ICMP packets. Bounded to 1–10 packets and rate-limited.</td>
+            </tr>
+            <tr>
+              <td><strong>Subnet scan</strong><small>Overview tab</small></td>
+              <td><code>ping -n -c 1 -W 1 -- &lt;ip&gt;</code></td>
+              <td>Exit code, detected subnet list</td>
+              <td>Active probe: one ICMP echo per IPv4 host on the local subnets, capped at 512 hosts. It fills the kernel neighbour cache but changes no address, route or interface.</td>
             </tr>
             <tr>
               <td><strong>Path probe</strong><small>Network tools tab</small></td>

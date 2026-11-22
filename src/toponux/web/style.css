@@ -223,6 +223,38 @@ main {
   color: #cbd5e1;
   cursor: pointer;
 }
+.scan-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.scan-button .spinner {
+  display: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: scan-spin 0.7s linear infinite;
+}
+.scan-button.busy .spinner {
+  display: inline-block;
+}
+.scan-status {
+  align-self: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.scan-status.error {
+  color: #fca5a5;
+}
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .details {
   padding: 17px;
   overflow: auto;

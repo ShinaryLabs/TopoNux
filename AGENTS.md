@@ -360,3 +360,51 @@ Les agents peuvent utiliser les commandes Git en lecture seule pour examiner l'�
 4. Laisser toutes les modifications dans le répertoire de travail, sans commit.
 
 **Le commit final est toujours une action manuelle réalisée exclusivement par l'utilisateur.**
+
+## 13. Documentation et maintenance du README
+
+**Le fichier README.md doit être maintenu à jour à chaque modification du projet.**
+
+Les agents IA doivent respecter les règles suivantes :
+
+### Mise à jour systématique
+
+- Toute nouvelle fonctionnalité doit être documentée dans le README.md.
+- Toute modification du comportement existant doit entraîner la mise à jour de la documentation correspondante.
+- Toute fonctionnalité supprimée doit être retirée du README.md.
+- Les commandes d'installation, de configuration et d'utilisation doivent rester conformes au fonctionnement réel de l'application.
+- Les exemples de commandes et de sorties doivent être vérifiés et cohérents avec l'implémentation.
+
+### Section Data Sources
+
+La section du site **Data Sources** doit être mise à jour.
+
+Cette section doit documenter de manière exhaustive toutes les sources de données utilisées par l'application.
+
+Pour chaque source de données, préciser :
+
+- **Nom de la source** : fichier système, pseudo-fichier, commande Linux, API ou service interrogé.
+- **Localisation** : chemin complet du fichier ou nom de la commande utilisée.
+- **Données collectées** : description précise de chaque information récupérée.
+- **Méthode de collecte** : lecture de fichier, exécution de commande, interrogation d'une API locale, etc.
+- **Permissions nécessaires** : préciser si les données sont accessibles à un utilisateur standard ou nécessitent des permissions particulières.
+- **Compatibilité** : distributions Linux ou services concernés, lorsque pertinent.
+- **Limites** : informations éventuellement indisponibles selon l'environnement.
+
+### Exhaustivité et traçabilité
+
+- Toute nouvelle donnée collectée doit impérativement être ajoutée à la section Data Sources.
+- Toute modification ou suppression d'une collecte doit entraîner la mise à jour de cette section.
+- Aucune source de données ne doit être utilisée sans être documentée.
+- La documentation doit refléter exactement les sources réellement utilisées par le code.
+- Ne jamais documenter une source ou une donnée qui n'est pas effectivement collectée.
+
+### Règle de livraison
+
+Avant de terminer une tâche, vérifier systématiquement :
+1. Que le README.md a été mis à jour si nécessaire.
+2. Que toutes les nouvelles données collectées sont documentées dans Data Sources.
+3. Que les informations documentées correspondent à l'implémentation réelle.
+4. Que les exemples et commandes du README sont toujours valides.
+
+**Une fonctionnalité n'est considérée comme terminée que lorsque son implémentation et sa documentation sont cohérentes.**

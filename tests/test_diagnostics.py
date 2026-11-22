@@ -1,6 +1,9 @@
+import subprocess
+
 import pytest
 
-from toponux.collectors.diagnostics import inspect_ipv6, validate_target
+import toponux.collectors.diagnostics as diagnostics
+from toponux.collectors.diagnostics import inspect_ipv6, scan_local_subnets, validate_target
 
 
 @pytest.mark.parametrize(
@@ -18,6 +21,94 @@ def test_validate_target_accepts_ip_and_dns(target):
 def test_validate_target_rejects_unsafe_input(target):
     with pytest.raises(ValueError):
         validate_target(target)
+
+
+class _CompletedProcess:
+    def __init__(self, returncode: int):
+        self.returncode = returncode
+
+
+def test_scan_local_subnets_pings_hosts_and_counts_replies(monkeypatch):
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return _CompletedProcess(0 if command[-1].endswith(".9") else 1)
+
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: "/usr/bin/ping")
+    monkeypatch.setattr(diagnostics.subprocess, "run", fake_run)
+    interfaces = [
+        {
+            "ifname": "lo",
+            "operstate": "UNKNOWN",
+            "addr_info": [{"family": "inet", "local": "127.0.0.1", "prefixlen": 8}],
+        },
+        {
+            "ifname": "eth0",
+            "operstate": "UP",
+            "addr_info": [{"family": "inet", "local": "192.0.2.10", "prefixlen": 29}],
+        },
+    ]
+
+    result = scan_local_subnets(interfaces)
+
+    assert result["available"] is True
+    assert result["networks"] == [{"interface": "eth0", "network": "192.0.2.8/29"}]
+    assert result["scanned"] == 5
+    assert result["responsive"] == 1
+    assert sorted(call[0][-1] for call in calls) == [
+        "192.0.2.11",
+        "192.0.2.12",
+        "192.0.2.13",
+        "192.0.2.14",
+        "192.0.2.9",
+    ]
+    for command, kwargs in calls:
+        assert command[:5] == ["/usr/bin/ping", "-n", "-c", "1", "-W"]
+        assert command[-2] == "--"
+        assert kwargs["timeout"] == diagnostics.SCAN_PING_TIMEOUT
+        assert kwargs["stdout"] is subprocess.DEVNULL
+        assert kwargs["stderr"] is subprocess.DEVNULL
+        assert "shell" not in kwargs
+
+
+def test_scan_local_subnets_reports_missing_ping(monkeypatch):
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: None)
+
+    result = scan_local_subnets(
+        [{"ifname": "eth0", "addr_info": [{"family": "inet", "local": "192.0.2.10", "prefixlen": 24}]}]
+    )
+
+    assert result["available"] is False
+    assert "ping" in result["error"]
+    assert result["scanned"] == 0
+
+
+def test_scan_local_subnets_skips_loopback_and_link_local(monkeypatch):
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: "/usr/bin/ping")
+    interfaces = [
+        {"ifname": "lo", "addr_info": [{"family": "inet", "local": "127.0.0.1", "prefixlen": 8}]},
+        {"ifname": "eth0", "addr_info": [{"family": "inet", "local": "169.254.1.2", "prefixlen": 16}]},
+    ]
+
+    result = scan_local_subnets(interfaces)
+
+    assert result["networks"] == []
+    assert result["scanned"] == 0
+
+
+def test_scan_local_subnets_truncates_large_networks(monkeypatch):
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: "/usr/bin/ping")
+    monkeypatch.setattr(diagnostics.subprocess, "run", lambda *args, **kwargs: _CompletedProcess(1))
+    interfaces = [
+        {"ifname": "eth0", "operstate": "UP", "addr_info": [{"family": "inet", "local": "10.0.0.1", "prefixlen": 24}]}
+    ]
+
+    result = scan_local_subnets(interfaces, max_hosts=2)
+
+    assert result["scanned"] == 2
+    assert result["truncated"] is True
+    assert "Limited to 2 hosts" in result["message"]
 
 
 def test_inspect_link_local_ipv6_with_zone():

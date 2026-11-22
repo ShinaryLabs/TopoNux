@@ -6,11 +6,16 @@ import shutil
 import socket
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 _HOST_RE = re.compile(
     r"^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)"
     r"(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*\.?$"
 )
+
+SCAN_MAX_HOSTS = 512
+SCAN_WORKERS = 64
+SCAN_PING_TIMEOUT = 2
 
 
 def validate_target(target: str) -> str:
@@ -59,6 +64,108 @@ def run_ping(target: str, count: int = 4) -> dict:
         "reachable": result.returncode == 0,
         "route": route_lookup(target),
         "output": (result.stdout + result.stderr).strip(),
+    }
+
+
+def _ipv4_scan_networks(interfaces: list[dict]) -> list[dict]:
+    """Return the distinct IPv4 subnets carried by non-down interfaces."""
+    networks: dict[str, dict] = {}
+    for iface in interfaces:
+        ifname = iface.get("ifname")
+        if not ifname or ifname == "lo" or iface.get("operstate") == "DOWN":
+            continue
+        for item in iface.get("addr_info", []):
+            if item.get("family") != "inet":
+                continue
+            local, prefixlen = item.get("local"), item.get("prefixlen")
+            if not local or prefixlen is None:
+                continue
+            try:
+                interface = ipaddress.ip_interface(f"{local}/{prefixlen}")
+            except ValueError:
+                continue
+            if not isinstance(interface, ipaddress.IPv4Interface):
+                continue
+            network = interface.network
+            if network.is_loopback or network.is_link_local:
+                continue
+            key = str(network)
+            entry = networks.get(key)
+            if entry is None:
+                entry = {"interface": ifname, "network": network, "locals": []}
+                networks[key] = entry
+            entry["locals"].append(interface.ip)
+    return list(networks.values())
+
+
+def _scan_targets(networks: list[dict], max_hosts: int) -> tuple[list[ipaddress.IPv4Address], bool]:
+    """Enumerate usable hosts without materializing huge subnets."""
+    targets: list[ipaddress.IPv4Address] = []
+    local_ips = {address for entry in networks for address in entry["locals"]}
+    for entry in networks:
+        for host in entry["network"].hosts():
+            if host in local_ips:
+                continue
+            if len(targets) >= max_hosts:
+                return targets, True
+            targets.append(host)
+    return targets, False
+
+
+def _ping_host(binary: str, host: ipaddress.IPv4Address) -> bool:
+    """Send one ICMP echo without capturing output; return whether it answered."""
+    try:
+        result = subprocess.run(
+            [binary, "-n", "-c", "1", "-W", "1", "--", str(host)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=SCAN_PING_TIMEOUT,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode == 0
+
+
+def scan_local_subnets(interfaces: list[dict], max_hosts: int | None = None) -> dict:
+    """Ping every IPv4 host of the local subnets to populate the neighbour cache.
+
+    This is an active probe: it sends one ICMP echo per host and lets the kernel
+    update its ARP cache. It never configures an address, route or interface.
+    """
+    limit = SCAN_MAX_HOSTS if max_hosts is None else max_hosts
+    networks = _ipv4_scan_networks(interfaces)
+    summaries = [{"interface": entry["interface"], "network": str(entry["network"])} for entry in networks]
+    binary = shutil.which("ping")
+    if not binary:
+        return {
+            "available": False,
+            "error": "ping is not installed.",
+            "networks": summaries,
+            "scanned": 0,
+            "responsive": 0,
+            "truncated": False,
+        }
+
+    targets, truncated = _scan_targets(networks, limit)
+    started = time.monotonic()
+    replies: list[bool] = []
+    if targets:
+        with ThreadPoolExecutor(max_workers=min(SCAN_WORKERS, len(targets))) as executor:
+            replies = list(executor.map(lambda host: _ping_host(binary, host), targets))
+    duration_ms = round((time.monotonic() - started) * 1000)
+    responsive = sum(replies)
+    message = f"Scanned {len(targets)} IPv4 host(s); {responsive} replied."
+    if truncated:
+        message += f" Limited to {limit} hosts."
+    return {
+        "available": True,
+        "networks": summaries,
+        "scanned": len(targets),
+        "responsive": responsive,
+        "truncated": truncated,
+        "duration_ms": duration_ms,
+        "message": message,
     }
 
 

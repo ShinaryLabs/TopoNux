@@ -363,8 +363,30 @@ async function refresh() {
   try {
     const result = await readJson(await fetch('/api/graph', { cache: 'no-store' }));
     snapshot = result.snapshot; graph = result.graph; renderSnapshot();
-  } catch (error) { $('errors').textContent = String(error); }
+    return true;
+  } catch (error) { $('errors').textContent = String(error); return false; }
   finally { $('refresh').disabled = false; $('refresh').textContent = 'Refresh'; }
+}
+function setScanState(busy, message, isError = false) {
+  const button = $('scan-subnet');
+  const status = $('scan-status');
+  button.disabled = busy;
+  button.classList.toggle('busy', busy);
+  button.setAttribute('aria-busy', String(busy));
+  status.textContent = message;
+  status.classList.toggle('error', isError);
+}
+async function scanSubnet() {
+  setScanState(true, 'Scanning local IPv4 subnets…');
+  try {
+    const result = await readJson(await fetch('/api/tools/scan', { method: 'POST' }));
+    if (!result.available) throw new Error(result.error || 'Subnet scan is unavailable.');
+    setScanState(true, `${result.message} Refreshing the neighbour cache…`);
+    const refreshed = await refresh();
+    setScanState(false, refreshed ? `${result.message} Graph refreshed.` : `${result.message} Graph refresh failed.`, !refreshed);
+  } catch (error) {
+    setScanState(false, `Scan failed: ${error.message}`, true);
+  }
 }
 
 document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => {
@@ -408,6 +430,7 @@ $('firewall-families').addEventListener('click', event => {
   renderFirewallFlow(snapshot.firewall_view || {});
 });
 $('refresh').addEventListener('click', refresh);
+$('scan-subnet').addEventListener('click', scanSubnet);
 ['graph-ipv6', 'graph-docker'].forEach(id => $(id).addEventListener('change', renderGraph));
 refresh();
 

@@ -28,6 +28,7 @@
       <button class="tab" id="tab-btn-firewall" data-tab="firewall" role="tab" aria-selected="false" aria-controls="tab-firewall">Firewall</button>
       <button class="tab" id="tab-btn-diagnostics" data-tab="diagnostics" role="tab" aria-selected="false" aria-controls="tab-diagnostics">Network tools</button>
       <button class="tab" id="tab-btn-data" data-tab="data" role="tab" aria-selected="false" aria-controls="tab-data">Data sources</button>
+      <button class="tab" id="tab-btn-changes" data-tab="changes" role="tab" aria-selected="false" aria-controls="tab-changes">Changes</button>
     </nav>
 
     <section id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
@@ -257,6 +258,42 @@
         <li>Socket data is a snapshot of the current network namespace. Process names may be incomplete without sufficient privileges.</li>
         <li>Diagnostic results are observations at one moment, not proof of a permanent state.</li>
       </ul>
+    </section>
+
+    <section id="tab-changes" class="tab-content changes-view" role="tabpanel" aria-labelledby="tab-btn-changes">
+      <div class="table-toolbar">
+        <div><h2>Snapshot changes</h2><p>Compare the current snapshot with a baseline saved in this browser.</p></div>
+        <div class="fw-actions">
+          <button id="save-baseline" class="secondary" type="button">Save baseline</button>
+          <button id="clear-baseline" class="secondary" type="button">Clear baseline</button>
+        </div>
+      </div>
+      <div id="changes-status" class="notice"></div>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Listening ports</h2><p>Added or removed listening sockets.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Protocol</th><th>Local endpoint</th><th>Process</th></tr></thead><tbody id="listener-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Established connections</h2><p>Added or removed remote connections.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Protocol</th><th>Local endpoint</th><th>Remote endpoint</th><th>Process</th></tr></thead><tbody id="connection-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Interfaces</h2><p>Added or removed interfaces.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Interface</th><th>State</th><th>IP addresses</th></tr></thead><tbody id="interface-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Neighbours</h2><p>Added or removed neighbour entries.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Interface</th><th>MAC</th><th>Addresses</th></tr></thead><tbody id="neighbor-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Routes</h2><p>Added or removed routes.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Family</th><th>Destination</th><th>Gateway</th><th>Device</th><th>Table</th></tr></thead><tbody id="route-changes-body"></tbody></table></div>
+      </section>
     </section>
 
     <section class="panel raw"><h2>Raw data</h2><details><summary>Show the full JSON snapshot</summary><pre id="raw-json"></pre></details></section>

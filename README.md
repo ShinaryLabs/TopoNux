@@ -45,6 +45,7 @@ toponux --host 0.0.0.0 --allow-remote
 - **Interfaces**: full inventory, including loopback, veth and DOWN interfaces.
 - **Neighbours**: ARP/NDP cache grouped by interface and MAC.
 - **Ports**: TCP/UDP listening sockets and established connections to remote peers.
+- **Changes**: compare the current snapshot with a baseline saved in the browser.
 - **Routing**: all IPv4/IPv6 routes and policy routing rules.
 - **Firewall**: collection status and available rules.
 - **Network tools**: bounded active diagnostics and the local IPv6 inspector.
@@ -70,6 +71,10 @@ uv run mypy
 uv run pytest
 ```
 
+
+## Snapshot comparison
+
+The **Changes** tab compares the current snapshot with a baseline saved in the browser (`localStorage`). It lists added and removed interfaces, neighbours, routes, listening sockets and established connections. No data leaves the machine and no network packet is sent.
 
 ## Ports and connections
 

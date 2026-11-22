@@ -372,7 +372,7 @@ function renderSnapshot() {
   $('footer-time').textContent = new Date(snapshot.collected_at).toLocaleTimeString();
   $('errors').textContent = Object.keys(snapshot.errors || {}).length ? JSON.stringify(snapshot.errors, null, 2) : 'No errors reported.';
   $('raw-json').textContent = JSON.stringify(snapshot, null, 2);
-  renderFirewall(); renderInterfaces(); renderNeighbors(); renderPorts(); renderRoutes(); renderGraph();
+  renderFirewall(); renderInterfaces(); renderNeighbors(); renderPorts(); renderChanges(); renderRoutes(); renderGraph();
 }
 let activeDiagnostic = null;
 
@@ -413,6 +413,93 @@ async function scanSubnet() {
   } catch (error) {
     setScanState(false, `Scan failed: ${error.message}`, true);
   }
+}
+const BASELINE_KEY = 'toponux-baseline';
+function loadBaseline() {
+  try {
+    const raw = localStorage.getItem(BASELINE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveBaselineSnapshot() {
+  const status = $('changes-status');
+  if (!snapshot || !snapshot.collected_at) { status.textContent = 'Load a snapshot before saving a baseline.'; status.classList.add('error'); return; }
+  status.classList.remove('error');
+  try {
+    const baseline = {
+      collected_at: snapshot.collected_at,
+      interfaces: snapshot.interfaces || [],
+      routes: snapshot.routes || {},
+      neighbors_view: snapshot.neighbors_view || [],
+      sockets_view: snapshot.sockets_view || { listeners: [], connections: [] },
+    };
+    localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline));
+    renderChanges();
+    status.textContent = `Baseline saved from ${new Date(baseline.collected_at).toLocaleString()}.`;
+  } catch (error) {
+    status.textContent = `Could not save baseline: ${error.message}`;
+    status.classList.add('error');
+  }
+}
+function clearBaselineSnapshot() {
+  try { localStorage.removeItem(BASELINE_KEY); } catch {}
+  renderChanges();
+  $('changes-status').textContent = 'Baseline cleared.';
+  $('changes-status').classList.remove('error');
+}
+function flatRoutes(snapshotData) {
+  return Object.entries(snapshotData.routes || {}).flatMap(([family, routes]) =>
+    (Array.isArray(routes) ? routes : []).map(route => ({ family, ...route })));
+}
+function diffByKey(currentItems, baselineItems, keyFn) {
+  const baselineKeys = new Set((baselineItems || []).map(keyFn));
+  const currentKeys = new Set((currentItems || []).map(keyFn));
+  return {
+    added: (currentItems || []).filter(item => !baselineKeys.has(keyFn(item))),
+    removed: (baselineItems || []).filter(item => !currentKeys.has(keyFn(item))),
+  };
+}
+function renderChanges() {
+  const baseline = loadBaseline();
+  const status = $('changes-status');
+  status.classList.remove('error');
+  if (!baseline) {
+    status.textContent = 'No baseline saved. Load a snapshot, then click Save baseline.';
+    ['interface-changes-body', 'neighbor-changes-body', 'route-changes-body', 'listener-changes-body', 'connection-changes-body'].forEach(id => {
+      $(id).innerHTML = '<tr><td colspan="10" class="empty">No baseline to compare.</td></tr>';
+    });
+    return;
+  }
+  status.textContent = `Baseline: ${new Date(baseline.collected_at).toLocaleString()} · Current: ${new Date(snapshot.collected_at).toLocaleString()}`;
+  const interfaceDiff = diffByKey(snapshot.interfaces || [], baseline.interfaces || [], item => item.ifname);
+  $('interface-changes-body').innerHTML = [
+    ...interfaceDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(item.ifname)}</td><td>${escapeHtml(item.operstate || '—')}</td><td>${escapeHtml(interfaceAddresses(item).join(', ') || '—')}</td></tr>`),
+    ...interfaceDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(item.ifname)}</td><td>${escapeHtml(item.operstate || '—')}</td><td>${escapeHtml(interfaceAddresses(item).join(', ') || '—')}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const neighborDiff = diffByKey(snapshot.neighbors_view || [], baseline.neighbors_view || [], item => `${item.interface}|${item.mac}`);
+  $('neighbor-changes-body').innerHTML = [
+    ...neighborDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(item.interface)}</td><td>${escapeHtml(item.mac)}</td><td>${escapeHtml((item.addresses || []).join(', ') || '—')}</td></tr>`),
+    ...neighborDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(item.interface)}</td><td>${escapeHtml(item.mac)}</td><td>${escapeHtml((item.addresses || []).join(', ') || '—')}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const routeDiff = diffByKey(flatRoutes(snapshot), flatRoutes(baseline), item => `${item.family}|${item.dst || 'default'}|${item.gateway || ''}|${item.dev || ''}|${item.table || 'main'}|${item.metric ?? ''}`);
+  $('route-changes-body').innerHTML = [
+    ...routeDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.family).toUpperCase())}</td><td>${escapeHtml(item.dst || 'default')}</td><td>${escapeHtml(item.gateway || '—')}</td><td>${escapeHtml(item.dev || '—')}</td><td>${escapeHtml(item.table || 'main')}</td></tr>`),
+    ...routeDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.family).toUpperCase())}</td><td>${escapeHtml(item.dst || 'default')}</td><td>${escapeHtml(item.gateway || '—')}</td><td>${escapeHtml(item.dev || '—')}</td><td>${escapeHtml(item.table || 'main')}</td></tr>`),
+  ].join('') || '<tr><td colspan="6" class="empty">No change.</td></tr>';
+
+  const listenerDiff = diffByKey((snapshot.sockets_view || {}).listeners || [], (baseline.sockets_view || {}).listeners || [], item => `${item.protocol}|${item.local_address}|${item.local_port}`);
+  $('listener-changes-body').innerHTML = [
+    ...listenerDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+    ...listenerDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const connectionDiff = diffByKey((snapshot.sockets_view || {}).connections || [], (baseline.sockets_view || {}).connections || [], item => `${item.protocol}|${item.local_address}|${item.local_port}|${item.peer_address}|${item.peer_port}`);
+  $('connection-changes-body').innerHTML = [
+    ...connectionDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+    ...connectionDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+  ].join('') || '<tr><td colspan="5" class="empty">No change.</td></tr>';
 }
 
 document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => {
@@ -459,6 +546,8 @@ $('firewall-families').addEventListener('click', event => {
 });
 $('refresh').addEventListener('click', refresh);
 $('scan-subnet').addEventListener('click', scanSubnet);
+$('save-baseline').addEventListener('click', saveBaselineSnapshot);
+$('clear-baseline').addEventListener('click', clearBaselineSnapshot);
 ['graph-ipv6', 'graph-docker'].forEach(id => $(id).addEventListener('change', renderGraph));
 refresh();
 

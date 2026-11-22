@@ -290,6 +290,16 @@ pre {
   display: grid;
   gap: 16px;
 }
+.tab-content.changes-view.active {
+  display: grid;
+  gap: 16px;
+}
+.change-added {
+  color: #6ee7b7;
+}
+.change-removed {
+  color: #fca5a5;
+}
 .table-panel {
   padding: 18px;
 }

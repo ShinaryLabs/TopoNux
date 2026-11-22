@@ -283,9 +283,20 @@ def build_graph(snapshot: dict) -> dict:
                 edge_label = "interface"
         edges.append({"data": {"id": f"l2-{name}", "source": parent_id, "target": node_id, "label": edge_label}})
 
+    # Default routes are resolved after neighbours so a gateway that is already
+    # present in the ARP/NDP cache reuses the same node instead of being duplicated.
+    default_routes = [
+        (family, route)
+        for family, routes in snapshot.get("routes", {}).items()
+        for route in routes
+        if route.get("dst") == "default"
+    ]
+    gateway_hops = {(route.get("dev"), route.get("gateway")) for _, route in default_routes if route.get("gateway")}
+
     # ARP/NDP neighbours are shown as small leaf nodes attached to the interface
     # or bridge that reaches them. Docker networks stay flagged for the UI filter.
     grouped: dict[tuple[str, str], dict] = {}
+    neighbor_node_by_address: dict[tuple[str, str], dict] = {}
     raw_neighbors = snapshot.get("neighbors", [])
     for entry in raw_neighbors if isinstance(raw_neighbors, list) else []:
         dev, mac, dst = entry.get("dev"), entry.get("lladdr"), entry.get("dst")
@@ -310,32 +321,37 @@ def build_graph(snapshot: dict) -> dict:
         docker = _is_docker_interface(dev)
         node_id = f"neighbor:{dev}:{mac}"
         more = f" (+{len(addresses) - 1})" if len(addresses) > 1 else ""
-        nodes.append(
-            {
-                "data": {
-                    "id": node_id,
-                    "label": f"{primary}{more}",
-                    "kind": "neighbor",
-                    "family": family,
-                    "docker": docker,
-                    "mac": mac,
-                    "dev": dev,
-                    "state": ", ".join(record["states"]),
-                    "addresses": addresses,
-                    "details": "\n".join(
-                        [
-                            f"Neighbor: {primary}",
-                            "Addresses:",
-                            *addresses,
-                            f"MAC: {mac}",
-                            f"Interface: {dev}",
-                            f"State: {', '.join(record['states'])}",
-                            "Source: ARP/NDP cache" + (" (container network)" if docker else ""),
-                        ]
-                    ),
-                }
+        node = {
+            "data": {
+                "id": node_id,
+                "label": f"{primary}{more}",
+                "kind": "neighbor",
+                "family": family,
+                "docker": docker,
+                "mac": mac,
+                "dev": dev,
+                "state": ", ".join(record["states"]),
+                "addresses": addresses,
+                "details": "\n".join(
+                    [
+                        f"Neighbor: {primary}",
+                        "Addresses:",
+                        *addresses,
+                        f"MAC: {mac}",
+                        f"Interface: {dev}",
+                        f"State: {', '.join(record['states'])}",
+                        "Source: ARP/NDP cache" + (" (container network)" if docker else ""),
+                    ]
+                ),
             }
-        )
+        }
+        nodes.append(node)
+        for address in addresses:
+            neighbor_node_by_address[(dev, address)] = node["data"]
+        # A neighbour that is also a default gateway is drawn once, by the
+        # default-route edge below, instead of twice with parallel edges.
+        if any((dev, address) in gateway_hops for address in addresses):
+            continue
         edges.append(
             {
                 "data": {
@@ -349,37 +365,52 @@ def build_graph(snapshot: dict) -> dict:
 
     # Show only the default route(s) in the overview. All routes remain in the Routes tab.
     # On-link defaults have no gateway: they are shown as a default route through their device.
-    default_routes = []
-    for family, routes in snapshot.get("routes", {}).items():
-        for route in routes:
-            if route.get("dst") == "default":
-                default_routes.append((family, route))
+    linked_defaults: set[tuple[str, str]] = set()
     for index, (family, route) in enumerate(default_routes):
         gateway = route.get("gateway")
         dev = route.get("dev")
         hop = gateway or dev or "unknown"
-        gw_id = f"gateway:{family}:{hop}:{index}"
-        label = f"Gateway\n{gateway}" if gateway else f"Default route\n{dev or '—'}"
-        gateway_details = "\n".join(
-            [
-                f"Gateway: {gateway or '— (on-link)'}",
-                f"Family: {family}",
-                f"Interface: {dev or '—'}",
-                f"Table : {route.get('table', 'main')}",
-                f"Metric: {route.get('metric', '—')}",
-            ]
-        )
-        nodes.append(
-            {
-                "data": {
-                    "id": gw_id,
-                    "label": label,
-                    "kind": "gateway",
-                    "details": gateway_details,
+        route_details = [
+            f"Family: {family}",
+            f"Interface: {dev or '—'}",
+            f"Table: {route.get('table', 'main')}",
+            f"Metric: {route.get('metric', '—')}",
+        ]
+        neighbor = neighbor_node_by_address.get((dev, gateway)) if gateway and dev else None
+        if neighbor is None:
+            gw_id = f"gateway:{family}:{hop}:{index}"
+            label = f"Gateway\n{gateway}" if gateway else f"Default route\n{dev or '—'}"
+            gateway_details = "\n".join(
+                [
+                    f"Gateway: {gateway or '— (on-link)'}",
+                    f"Family: {family}",
+                    f"Interface: {dev or '—'}",
+                    f"Table : {route.get('table', 'main')}",
+                    f"Metric: {route.get('metric', '—')}",
+                ]
+            )
+            nodes.append(
+                {
+                    "data": {
+                        "id": gw_id,
+                        "label": label,
+                        "kind": "gateway",
+                        "details": gateway_details,
+                    }
                 }
-            }
-        )
+            )
+        else:
+            # Merge the gateway role into the existing neighbour node.
+            gw_id = neighbor["id"]
+            neighbor["kind"] = "gateway"
+            neighbor["label"] = f"Gateway\n{gateway}"
+            neighbor["details"] = "\n".join(
+                [neighbor["details"], "Default route:", *(f"  {line}" for line in route_details)]
+            )
         target = node_id_by_name.get(dev or "", "host")
+        if (target, gw_id) in linked_defaults:
+            continue
+        linked_defaults.add((target, gw_id))
         edges.append({"data": {"id": f"default-{index}", "source": target, "target": gw_id, "label": "default route"}})
 
     return {"nodes": nodes, "edges": edges}

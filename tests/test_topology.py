@@ -114,6 +114,37 @@ def test_neighbor_addresses_are_grouped_per_mac_and_family_is_detected():
     assert ipv6_only["family"] == "ip6"
 
 
+def test_default_gateway_reuses_matching_neighbor_node():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "eth0", "operstate": "UP", "addr_info": [{"local": "192.0.2.10", "prefixlen": 24}]},
+        ],
+        "neighbors": [
+            {"dst": "192.0.2.1", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:01", "state": ["REACHABLE"]},
+        ],
+        "routes": {
+            "ipv4": [
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "table": "main", "metric": 100},
+            ],
+            "ipv6": [],
+        },
+    }
+
+    graph = build_graph(snapshot)
+    gateways = [node["data"] for node in graph["nodes"] if node["data"]["kind"] == "gateway"]
+    edges = {(edge["data"]["source"], edge["data"]["target"], edge["data"]["label"]) for edge in graph["edges"]}
+
+    assert len(gateways) == 1
+    gateway = gateways[0]
+    assert gateway["id"] == "neighbor:eth0:aa:bb:cc:dd:ee:01"
+    assert gateway["label"] == "Gateway\n192.0.2.1"
+    assert "Neighbor: 192.0.2.1" in gateway["details"]
+    assert "Default route:" in gateway["details"]
+    assert "Table: main" in gateway["details"]
+    assert ("if:eth0", gateway["id"], "default route") in edges
+    assert ("if:eth0", gateway["id"], "neighbor") not in edges
+
+
 def test_unusable_or_unattached_neighbor_entries_are_skipped():
     snapshot = {
         "interfaces": [

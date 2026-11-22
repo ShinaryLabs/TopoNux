@@ -55,9 +55,12 @@ def lookup_vendor(mac: str) -> str | None:
         first_byte = int(prefix[:2], 16)
     except ValueError:
         return None
+    vendor = _load_oui().get(prefix)
+    if vendor:
+        return vendor
     if first_byte & 0x02:
         return "Locally administered"
-    return _load_oui().get(prefix)
+    return None
 
 
 def normalize_neighbors(entries: list[dict] | None) -> list[dict]:

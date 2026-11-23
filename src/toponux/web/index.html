@@ -7,11 +7,12 @@
   <script src="/static/vendor/cytoscape.min.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header>
     <div><h1>Toponux</h1><p>Local network configuration mapping · Read-only</p></div>
-    <button id="refresh">Refresh</button>
+    <button id="refresh" type="button">Refresh</button>
   </header>
-  <main>
+  <main id="main">
     <section class="summary">
       <div class="metric"><span>Interfaces</span><strong id="interface-count">—</strong><small id="interface-sub">—</small></div>
       <div class="metric"><span>Routes</span><strong id="route-count">—</strong><small>IPv4 + IPv6, all tables</small></div>
@@ -50,12 +51,12 @@
     </section>
 
     <section id="tab-interfaces" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-interfaces">
-      <div class="table-toolbar"><div><h2>Network interfaces</h2><p>Full inventory, including DOWN and veth interfaces.</p></div><input id="interface-filter" type="search" placeholder="Filter interfaces…"></div>
+      <div class="table-toolbar"><div><h2>Network interfaces</h2><p>Full inventory, including DOWN and veth interfaces.</p></div><label class="sr-only" for="interface-filter">Filter interfaces</label><input id="interface-filter" type="search" placeholder="Filter interfaces…"></div>
       <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>Traffic</th><th>Errors</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
     </section>
 
     <section id="tab-neighbors" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-neighbors">
-      <div class="table-toolbar"><div><h2>Neighbours (ARP/NDP)</h2><p>Grouped by MAC and interface. Vendor comes from a local OUI database when available; no network probe is sent.</p></div><input id="neighbor-filter" type="search" placeholder="Filter MAC, vendor, interface, address…"></div>
+      <div class="table-toolbar"><div><h2>Neighbours (ARP/NDP)</h2><p>Grouped by MAC and interface. Vendor comes from a local OUI database when available; no network probe is sent.</p></div><label class="sr-only" for="neighbor-filter">Filter neighbours</label><input id="neighbor-filter" type="search" placeholder="Filter MAC, vendor, interface, address…"></div>
       <div class="table-wrap"><table><thead><tr><th>MAC address</th><th>OUI / vendor</th><th>Interface</th><th>State</th><th>Addresses</th></tr></thead><tbody id="neighbors-body"></tbody></table></div>
     </section>
 
@@ -63,18 +64,18 @@
       <div id="ports-message" class="notice"></div>
 
       <section class="panel table-panel">
-        <div class="table-toolbar"><div><h2>Listening ports</h2><p>TCP/UDP sockets bound on this machine. Read from <code>ss</code>; nothing is opened or modified.</p></div><input id="listener-filter" type="search" placeholder="Filter protocol, address, port, process…"></div>
+        <div class="table-toolbar"><div><h2>Listening ports</h2><p>TCP/UDP sockets bound on this machine. Read from <code>ss</code>; nothing is opened or modified.</p></div><label class="sr-only" for="listener-filter">Filter listening ports</label><input id="listener-filter" type="search" placeholder="Filter protocol, address, port, process…"></div>
         <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Local address</th><th>Port</th><th>Process</th></tr></thead><tbody id="listeners-body"></tbody></table></div>
       </section>
 
       <section class="panel table-panel">
-        <div class="table-toolbar"><div><h2>Established connections</h2><p>TCP/UDP connections to peers outside this machine. Loopback and local-address traffic is hidden.</p></div><input id="connection-filter" type="search" placeholder="Filter protocol, local/remote address, process…"></div>
+        <div class="table-toolbar"><div><h2>Established connections</h2><p>TCP/UDP connections to peers outside this machine. Loopback and local-address traffic is hidden.</p></div><label class="sr-only" for="connection-filter">Filter established connections</label><input id="connection-filter" type="search" placeholder="Filter protocol, local/remote address, process…"></div>
         <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Local endpoint</th><th>Remote endpoint</th><th>State</th><th>Process</th></tr></thead><tbody id="connections-body"></tbody></table></div>
       </section>
     </section>
 
     <section id="tab-routes" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-routes">
-      <div class="table-toolbar"><div><h2>Routing tables</h2><p>IPv4 and IPv6 routes, including local and special entries.</p></div><input id="route-filter" type="search" placeholder="Filter destination, interface, gateway…"></div>
+      <div class="table-toolbar"><div><h2>Routing tables</h2><p>IPv4 and IPv6 routes, including local and special entries.</p></div><label class="sr-only" for="route-filter">Filter routes</label><input id="route-filter" type="search" placeholder="Filter destination, interface, gateway…"></div>
       <div class="table-wrap"><table><thead><tr><th>Family</th><th>Destination</th><th>Gateway</th><th>Interface</th><th>Table</th><th>Type / state</th><th>Metric</th></tr></thead><tbody id="routes-body"></tbody></table></div>
       <h2 class="subheading">Policy routing rules</h2><div id="rules-list" class="rules-list"></div>
     </section>

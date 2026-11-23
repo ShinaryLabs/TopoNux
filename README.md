@@ -54,6 +54,18 @@ toponux --host 0.0.0.0 --allow-remote
 
 The global view intentionally hides local, broadcast and multicast routes as well as veth interfaces. Details remain available in the dedicated views.
 
+## Interface
+
+The web interface follows the design system described in `DESIGN.md`. All colours, spacing, radii and typography values are centralised as CSS custom properties at the top of `src/toponux/web/style.css`; pages and components reference those tokens instead of hard-coded values.
+
+- Status colours carry meaning: green for an operational state, amber for a warning or an unknown state, red for an error, blue for information and navigation. Badges always combine a tinted background with a readable label.
+- Buttons, fields, tables, badges and panels share one set of variants across every tab.
+- The topology and firewall graphs use the same tokens, with white text on saturated fills.
+- Tabs are reachable with the keyboard: `Tab` enters the tab list, then `ArrowLeft`, `ArrowRight`, `Home` and `End` move between views. A skip link jumps straight to the content.
+- Search fields have accessible labels, focus is always visible, and animations are disabled when the system requests reduced motion.
+- Layouts adapt to desktop, tablet and mobile widths; wide tables scroll horizontally instead of truncating data.
+- No font, script or stylesheet is loaded from the network: everything is served locally.
+
 ## Tests
 
 ```bash

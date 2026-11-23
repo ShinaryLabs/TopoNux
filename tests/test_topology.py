@@ -114,6 +114,37 @@ def test_neighbor_addresses_are_grouped_per_mac_and_family_is_detected():
     assert ipv6_only["family"] == "ip6"
 
 
+def test_default_gateway_reuses_matching_neighbor_node():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "eth0", "operstate": "UP", "addr_info": [{"local": "192.0.2.10", "prefixlen": 24}]},
+        ],
+        "neighbors": [
+            {"dst": "192.0.2.1", "dev": "eth0", "lladdr": "aa:bb:cc:dd:ee:01", "state": ["REACHABLE"]},
+        ],
+        "routes": {
+            "ipv4": [
+                {"dst": "default", "gateway": "192.0.2.1", "dev": "eth0", "table": "main", "metric": 100},
+            ],
+            "ipv6": [],
+        },
+    }
+
+    graph = build_graph(snapshot)
+    gateways = [node["data"] for node in graph["nodes"] if node["data"]["kind"] == "gateway"]
+    edges = {(edge["data"]["source"], edge["data"]["target"], edge["data"]["label"]) for edge in graph["edges"]}
+
+    assert len(gateways) == 1
+    gateway = gateways[0]
+    assert gateway["id"] == "neighbor:eth0:aa:bb:cc:dd:ee:01"
+    assert gateway["label"] == "Gateway\n192.0.2.1"
+    assert "Neighbor: 192.0.2.1" in gateway["details"]
+    assert "Default route:" in gateway["details"]
+    assert "Table: main" in gateway["details"]
+    assert ("if:eth0", gateway["id"], "default route") in edges
+    assert ("if:eth0", gateway["id"], "neighbor") not in edges
+
+
 def test_unusable_or_unattached_neighbor_entries_are_skipped():
     snapshot = {
         "interfaces": [
@@ -133,3 +164,44 @@ def test_unusable_or_unattached_neighbor_entries_are_skipped():
     neighbor_ids = [node["data"]["id"] for node in graph["nodes"] if node["data"]["kind"] == "neighbor"]
 
     assert neighbor_ids == ["neighbor:eth0:dd:dd:dd:dd:dd:dd"]
+
+
+def test_graph_expands_l2_links_with_vlan_and_bond():
+    snapshot = {
+        "interfaces": [
+            {"ifname": "br0", "operstate": "UP", "addr_info": [{"local": "192.0.2.10", "prefixlen": 24}]},
+            {"ifname": "eth0", "operstate": "UP", "master": "br0", "addr_info": []},
+            {"ifname": "bond0", "operstate": "UP", "addr_info": [{"local": "10.0.0.1", "prefixlen": 24}]},
+            {"ifname": "eth1", "operstate": "UP", "master": "bond0", "addr_info": []},
+            {"ifname": "eth1.10", "operstate": "UP", "addr_info": [{"local": "10.0.1.1", "prefixlen": 24}]},
+        ],
+        "l2": {
+            "links": [
+                {
+                    "ifname": "br0",
+                    "linkinfo": {"info_kind": "bridge", "info_data": {"stp_state": 0, "vlan_filtering": 1}},
+                },
+                {"ifname": "eth0", "master": "br0", "linkinfo": {"info_kind": "bridge_slave"}},
+                {"ifname": "bond0", "linkinfo": {"info_kind": "bond", "info_data": {"mode": "802.3ad", "miimon": 100}}},
+                {"ifname": "eth1", "master": "bond0", "linkinfo": {"info_kind": "bond_slave"}},
+                {
+                    "ifname": "eth1.10",
+                    "linkinfo": {"info_kind": "vlan", "info_data": {"id": 10, "link": "eth1", "protocol": "802.1Q"}},
+                },
+            ],
+            "bridge_links": [],
+            "bridge_vlans": [{"ifname": "br0", "vlans": [{"vlan": 1, "flags": ["PVID", "Egress Untagged"]}]}],
+        },
+        "routes": {},
+    }
+
+    graph = build_graph(snapshot)
+    ids = {node["data"]["id"] for node in graph["nodes"]}
+    kinds = {node["data"]["kind"] for node in graph["nodes"]}
+    edges = {(edge["data"]["source"], edge["data"]["target"], edge["data"]["label"]) for edge in graph["edges"]}
+
+    assert {"host", "bridge:br0", "bond:bond0", "vlan:eth1.10"} <= ids
+    assert {"bond", "vlan"} <= kinds
+    assert ("bridge:br0", "if:eth0", "port") in edges
+    assert ("bond:bond0", "if:eth1", "slave") in edges
+    assert ("if:eth1", "vlan:eth1.10", "vlan 10") in edges

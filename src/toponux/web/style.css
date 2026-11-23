@@ -11,6 +11,10 @@
   --graph-interface-bg: #1d4ed8;
   --graph-bridge-bg: #047857;
   --graph-bridge-border: #34d399;
+  --graph-bond-bg: #5b21b6;
+  --graph-bond-border: #a78bfa;
+  --graph-vlan-bg: #9d174d;
+  --graph-vlan-border: #f472b6;
   --graph-gateway-bg: #92400e;
   --graph-gateway-border: #fbbf24;
   --graph-neighbor-bg: #0f766e;
@@ -192,6 +196,12 @@ main {
 .bridge {
   background: #059669;
 }
+.bond {
+  background: #7c3aed;
+}
+.vlan {
+  background: #db2777;
+}
 .gateway {
   background: #d97706;
 }
@@ -212,6 +222,38 @@ main {
   font-size: 11px;
   color: #cbd5e1;
   cursor: pointer;
+}
+.scan-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.scan-button .spinner {
+  display: none;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: scan-spin 0.7s linear infinite;
+}
+.scan-button.busy .spinner {
+  display: inline-block;
+}
+.scan-status {
+  align-self: center;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.scan-status.error {
+  color: #fca5a5;
+}
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .details {
   padding: 17px;
@@ -243,6 +285,20 @@ pre {
 .notes {
   margin-top: 15px;
   padding: 16px;
+}
+.tab-content.ports-view.active {
+  display: grid;
+  gap: 16px;
+}
+.tab-content.changes-view.active {
+  display: grid;
+  gap: 16px;
+}
+.change-added {
+  color: #6ee7b7;
+}
+.change-removed {
+  color: #fca5a5;
 }
 .table-panel {
   padding: 18px;
@@ -571,6 +627,67 @@ footer {
   color: #e2e8f0;
   font-size: 15px;
   margin-right: 3px;
+}
+.fw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.fw-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.fw-analytics {
+  margin-top: 12px;
+}
+.fw-analytics h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.fw-rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.fw-rule-list li {
+  background: #0b1220;
+  border: 1px solid #263449;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+.fw-rule-list small {
+  color: #94a3b8;
+}
+.fw-sets {
+  display: grid;
+  gap: 8px;
+}
+.fw-set {
+  background: #0b1220;
+  border: 1px solid #263449;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.fw-set strong {
+  color: #e2e8f0;
+}
+.fw-set span {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.fw-set p {
+  margin: 6px 0 0;
+  color: #cbd5e1;
+  font-size: 12px;
+  word-break: break-word;
 }
 .fw-toolbar {
   display: flex;

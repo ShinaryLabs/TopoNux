@@ -22,31 +22,55 @@
     <nav class="tabs" role="tablist" aria-label="Toponux views">
       <button class="tab active" id="tab-btn-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="tab-overview">Overview</button>
       <button class="tab" id="tab-btn-interfaces" data-tab="interfaces" role="tab" aria-selected="false" aria-controls="tab-interfaces">Interfaces</button>
+      <button class="tab" id="tab-btn-neighbors" data-tab="neighbors" role="tab" aria-selected="false" aria-controls="tab-neighbors">Neighbours</button>
+      <button class="tab" id="tab-btn-ports" data-tab="ports" role="tab" aria-selected="false" aria-controls="tab-ports">Ports</button>
       <button class="tab" id="tab-btn-routes" data-tab="routes" role="tab" aria-selected="false" aria-controls="tab-routes">Routing</button>
       <button class="tab" id="tab-btn-firewall" data-tab="firewall" role="tab" aria-selected="false" aria-controls="tab-firewall">Firewall</button>
       <button class="tab" id="tab-btn-diagnostics" data-tab="diagnostics" role="tab" aria-selected="false" aria-controls="tab-diagnostics">Network tools</button>
       <button class="tab" id="tab-btn-data" data-tab="data" role="tab" aria-selected="false" aria-controls="tab-data">Data sources</button>
+      <button class="tab" id="tab-btn-changes" data-tab="changes" role="tab" aria-selected="false" aria-controls="tab-changes">Changes</button>
     </nav>
 
     <section id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="tab-btn-overview">
       <div class="overview-grid">
         <section class="panel graph-panel">
-          <div class="panel-heading"><div><h2>Network topology</h2><p>Simplified view: local machine, active interfaces, virtual networks, default gateways and ARP/NDP neighbours.</p></div><span id="timestamp"></span></div>
+          <div class="panel-heading"><div><h2>Network topology</h2><p>Simplified view: local machine, active interfaces, bridges, bonds, VLAN devices, default gateways and ARP/NDP neighbours.</p></div><span id="timestamp"></span></div>
           <div class="graph-options" role="group" aria-label="Graph filters">
             <label class="graph-toggle"><input type="checkbox" id="graph-ipv6"> Show IPv6 neighbours</label>
             <label class="graph-toggle"><input type="checkbox" id="graph-docker"> Show Docker containers</label>
+            <button id="scan-subnet" class="secondary scan-button" type="button" title="Send one ping to every host on the local IPv4 subnets, then refresh the neighbour cache."><span class="spinner" aria-hidden="true"></span><span>Scan subnet</span></button>
+            <span id="scan-status" class="scan-status" role="status" aria-live="polite"></span>
           </div>
           <div id="cy"></div>
-          <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / virtual network</span><span><i class="dot gateway"></i>Gateway</span><span><i class="dot neighbor"></i>Neighbour (ARP/NDP)</span></div>
+          <div class="legend"><span><i class="dot host"></i>Machine</span><span><i class="dot interface"></i>Interface</span><span><i class="dot bridge"></i>Bridge / virtual network</span><span><i class="dot bond"></i>Bond</span><span><i class="dot vlan"></i>VLAN</span><span><i class="dot gateway"></i>Gateway</span><span><i class="dot neighbor"></i>Neighbour (ARP/NDP)</span></div>
         </section>
         <aside class="panel details"><h2>Details</h2><p id="detail-hint">Select an element in the graph.</p><pre id="details">Nothing selected.</pre><h2>Collection state</h2><pre id="errors">No errors reported.</pre></aside>
       </div>
-      <section class="panel notes"><h2>Reading the topology</h2><p>Neighbours come from the local ARP/NDP cache, so they are recent peers rather than a full LAN inventory. IPv6 and Docker entries are hidden by default. Local, broadcast and multicast routes are not drawn in this view. veth interfaces are grouped under their bridges. Use the dedicated tabs for the full inventory.</p></section>
+      <section class="panel notes"><h2>Reading the topology</h2><p>Neighbours come from the local ARP/NDP cache, so they are recent peers rather than a full LAN inventory. Use Scan subnet to send one ping to every IPv4 host of the current local subnets and populate that cache. IPv6 and Docker entries are hidden by default. Local, broadcast and multicast routes are not drawn in this view. veth interfaces are grouped under their bridges. Use the dedicated tabs for the full inventory.</p></section>
     </section>
 
     <section id="tab-interfaces" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-interfaces">
       <div class="table-toolbar"><div><h2>Network interfaces</h2><p>Full inventory, including DOWN and veth interfaces.</p></div><input id="interface-filter" type="search" placeholder="Filter interfaces…"></div>
-      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Interface</th><th>Type</th><th>State</th><th>IP addresses</th><th>Traffic</th><th>Errors</th><th>MTU</th><th>Master</th></tr></thead><tbody id="interfaces-body"></tbody></table></div>
+    </section>
+
+    <section id="tab-neighbors" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-neighbors">
+      <div class="table-toolbar"><div><h2>Neighbours (ARP/NDP)</h2><p>Grouped by MAC and interface. Vendor comes from a local OUI database when available; no network probe is sent.</p></div><input id="neighbor-filter" type="search" placeholder="Filter MAC, vendor, interface, address…"></div>
+      <div class="table-wrap"><table><thead><tr><th>MAC address</th><th>OUI / vendor</th><th>Interface</th><th>State</th><th>Addresses</th></tr></thead><tbody id="neighbors-body"></tbody></table></div>
+    </section>
+
+    <section id="tab-ports" class="tab-content ports-view" role="tabpanel" aria-labelledby="tab-btn-ports">
+      <div id="ports-message" class="notice"></div>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Listening ports</h2><p>TCP/UDP sockets bound on this machine. Read from <code>ss</code>; nothing is opened or modified.</p></div><input id="listener-filter" type="search" placeholder="Filter protocol, address, port, process…"></div>
+        <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Local address</th><th>Port</th><th>Process</th></tr></thead><tbody id="listeners-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Established connections</h2><p>TCP/UDP connections to peers outside this machine. Loopback and local-address traffic is hidden.</p></div><input id="connection-filter" type="search" placeholder="Filter protocol, local/remote address, process…"></div>
+        <div class="table-wrap"><table><thead><tr><th>Protocol</th><th>Local endpoint</th><th>Remote endpoint</th><th>State</th><th>Process</th></tr></thead><tbody id="connections-body"></tbody></table></div>
+      </section>
     </section>
 
     <section id="tab-routes" class="tab-content panel table-panel" role="tabpanel" aria-labelledby="tab-btn-routes">
@@ -56,7 +80,7 @@
     </section>
 
     <section id="tab-firewall" class="tab-content firewall-view" role="tabpanel" aria-labelledby="tab-btn-firewall">
-      <div class="table-toolbar panel"><div><h2>Firewall</h2><p>Reads existing rules only. Nothing is modified.</p></div><span id="firewall-badge" class="status-badge">—</span></div>
+      <div class="table-toolbar panel"><div><h2>Firewall</h2><p>Reads existing rules only. Nothing is modified.</p></div><span id="firewall-badge" class="status-badge">—</span><div class="fw-actions"><button id="fw-copy-command" class="secondary" type="button">Copy nft command</button><button id="fw-export-json" class="secondary" type="button">Export JSON</button><button id="fw-export-csv" class="secondary" type="button">Export CSV</button></div></div>
       <div id="firewall-message" class="notice"></div>
       <div id="firewall-kpis" class="fw-kpis"></div>
       <div class="fw-toolbar panel">
@@ -87,6 +111,11 @@
         <form id="port-form" class="tool-form"><label>Destination<input id="port-target" required maxlength="253" placeholder="192.0.2.10 or server.local"></label><label>TCP port<input id="port-number" type="number" min="1" max="65535" value="443" required></label><label>Timeout (seconds)<input id="port-timeout" type="number" min="0.5" max="5" step="0.5" value="2"></label><button type="submit">Test port</button></form>
         <pre id="port-result" class="tool-result">No test run yet.</pre>
       </section>
+      <section class="panel tool-card">
+        <h2>IPv6 address inspector</h2><p>Local analysis only: address type, scope, prefix and header flags. No packet is sent and no remote host is contacted.</p>
+        <form id="ipv6-form" class="tool-form"><label>IPv6 address<input id="ipv6-target" required maxlength="253" placeholder="fe80::1%eth0 or 2001:db8::1/64"></label><button type="submit">Inspect</button></form>
+        <pre id="ipv6-result" class="tool-result">Enter an IPv6 address.</pre>
+      </section>
       <section class="panel tool-note"><h2>About network probes</h2><ul><li>These tools are active probes: ping, traceroute and TCP connections send packets.</li><li>They do not modify any address, route, firewall rule or system configuration.</li><li>An incomplete traceroute may simply mean that some routers do not answer probes.</li><li>A successful TCP test proves the connection is possible from this machine, not which rule allowed it.</li><li>A timeout alone does not prove a local firewall block.</li></ul></section>
     </section>
 
@@ -95,19 +124,31 @@
 
       <div class="table-wrap sources-wrap">
         <table class="sources-table">
-          <thead><tr><th>Dataset</th><th>Command</th><th>Fields used</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Dataset</th><th>Command / location</th><th>Data collected</th><th>Permissions, compatibility and limits</th></tr></thead>
           <tbody>
             <tr>
               <td><strong>Interfaces</strong><small>Interfaces tab</small></td>
-              <td><code>ip -j address show</code></td>
-              <td><code>ifname</code>, <code>operstate</code>, <code>mtu</code>, <code>address</code>, <code>link_type</code>, <code>master</code>, <code>addr_info[]</code></td>
-              <td>Includes DOWN and veth interfaces. <code>-j</code> gives stable JSON instead of locale-dependent text.</td>
+              <td><code>ip -j address show</code><br><code>/sys/class/net/&lt;iface&gt;/statistics/*</code></td>
+              <td><code>ifname</code>, <code>operstate</code>, <code>mtu</code>, <code>address</code>, <code>link_type</code>, <code>master</code>, <code>addr_info[]</code>, <code>stats{rx_bytes,tx_bytes,rx_errors,tx_errors,rx_dropped,tx_dropped}</code></td>
+              <td>Includes DOWN and veth interfaces. <code>-j</code> gives stable JSON instead of locale-dependent text. Traffic counters are cumulative since boot and read from the kernel; missing or unreadable counters report <code>0</code>.</td>
             </tr>
             <tr>
               <td><strong>Neighbours</strong><small>Overview graph</small></td>
               <td><code>ip -j neigh show</code></td>
               <td><code>dst</code>, <code>dev</code>, <code>lladdr</code>, <code>state[]</code></td>
               <td>ARP (IPv4) and NDP (IPv6) cache. Recent peers only, not a full LAN inventory. Entries without a MAC and <code>lo</code>/<code>veth</code> devices are skipped. Grouped per device and MAC.</td>
+            </tr>
+            <tr>
+              <td><strong>Sockets / ports</strong><small>Ports tab</small></td>
+              <td><code>ss -H -t -u -a -n -p</code></td>
+              <td>Protocol, state, local address/port, peer address/port, process name and PID</td>
+              <td>Lists TCP/UDP listening sockets and established connections. Reading sockets usually works as an unprivileged user; process names for sockets owned by other users may require root or <code>CAP_NET_ADMIN</code>. Uses the current network namespace only; IPv6 output is supported. No socket is opened or modified.</td>
+            </tr>
+            <tr>
+              <td><strong>Neighbour view</strong><small>Neighbours tab</small></td>
+              <td>Derived from <code>ip -j neigh show</code> plus local OUI files</td>
+              <td><code>mac</code>, <code>interface</code>, <code>state</code>, <code>addresses</code>, <code>vendor</code></td>
+              <td>Groups ARP/NDP entries by MAC and interface. Vendor lookup uses <code>/usr/share/ieee-data/oui.txt</code> (or equivalent) when installed; otherwise it reports <code>Unknown</code> or <code>Locally administered</code>.</td>
             </tr>
             <tr>
               <td><strong>IPv4 routes</strong><small>Routing tab</small></td>
@@ -140,6 +181,12 @@
               <td>nftables JSON is preferred. Text iptables output is parsed best-effort. Reading nftables often needs root or <code>CAP_NET_ADMIN</code>; without it the tab shows a warning and the other views keep working.</td>
             </tr>
             <tr>
+              <td><strong>Layer 2 links</strong><small>Interfaces and Overview</small></td>
+              <td><code>ip -j -d link show</code><br><code>bridge -j link show</code><br><code>bridge -j vlan show</code></td>
+              <td><code>linkinfo.info_kind</code>, <code>info_data</code>, <code>master</code>, bridge port state, bridge VLAN lists</td>
+              <td>Detects bridges, bonds and VLAN devices (<code>eth0.10</code>). Bridge data may need <code>CAP_NET_ADMIN</code>; a missing <code>bridge</code> command is reported without hiding the rest.</td>
+            </tr>
+            <tr>
               <td><strong>Topology graph</strong><small>Overview tab</small></td>
               <td>No system command</td>
               <td>Built from interfaces, routes and neighbours</td>
@@ -152,6 +199,12 @@
               <td>Active probe: sends ICMP packets. Bounded to 1–10 packets and rate-limited.</td>
             </tr>
             <tr>
+              <td><strong>Subnet scan</strong><small>Overview tab</small></td>
+              <td><code>ping -n -c 1 -W 1 -- &lt;ip&gt;</code></td>
+              <td>Exit code, detected subnet list</td>
+              <td>Active probe: one ICMP echo per IPv4 host on the local subnets, capped at 512 hosts. It fills the kernel neighbour cache but changes no address, route or interface.</td>
+            </tr>
+            <tr>
               <td><strong>Path probe</strong><small>Network tools tab</small></td>
               <td><code>tracepath -n -m &lt;hops&gt; &lt;target&gt;</code><br>fallback: <code>traceroute -n -m &lt;hops&gt; -w 1 &lt;target&gt;</code></td>
               <td>Exit code, stdout, stderr</td>
@@ -162,6 +215,12 @@
               <td>Python <code>socket.create_connection()</code></td>
               <td>Connect result, latency, local address</td>
               <td>Active TCP connection attempt. Proves reachability from this machine, not which rule allowed it.</td>
+            </tr>
+            <tr>
+              <td><strong>IPv6 inspector</strong><small>Network tools tab</small></td>
+              <td>Python <code>ipaddress</code> (local computation)</td>
+              <td>Address type, scope, prefix, binary header flags</td>
+              <td>No command and no packet: the address is parsed locally. Accepts one address with an optional <code>/prefix</code> and zone, for example <code>fe80::1%eth0</code>.</td>
             </tr>
             <tr>
               <td><strong>Route lookup</strong><small>Network tools tab</small></td>
@@ -177,17 +236,17 @@
       <ul class="sources-list">
         <li>Each subsystem has its own collector. A failing collector stores its error in <code>errors</code> and returns a safe default, so one missing permission never hides the rest.</li>
         <li>Commands run without a shell, with a fixed argument list and a 10-second timeout. No user input is ever passed to the collectors.</li>
-        <li>Data is collected only when you press <strong>Refresh</strong> or load the page. There is no background polling and no persistence.</li>
+        <li>Data is collected only when you press <strong>Refresh</strong>, load the page, or run the subnet scan. There is no background polling and no persistence.</li>
         <li>Nothing leaves the machine: no analytics, no external API, no CDN. Cytoscape is vendored and served locally.</li>
-        <li>Collectors do not resolve hostnames and do not send packets. Only the diagnostic tools send traffic, and they are capped at 10 requests per minute per client.</li>
+        <li>Collectors do not resolve hostnames and do not send packets. Only the active probes (ping, traceroute, TCP test, subnet scan) send traffic. Diagnostic probes are capped at 10 requests per minute; subnet scans are capped at 2 per minute and 512 hosts. The IPv6 inspector is purely local.</li>
       </ul>
 
       <h2 class="subheading">Permissions</h2>
       <ul class="sources-list">
-        <li><code>ip</code> commands normally work as an unprivileged user.</li>
+        <li><code>ip</code> and <code>ss</code> commands normally work as an unprivileged user. Process names for sockets owned by other users may be hidden without elevated privileges.</li>
         <li><code>nft list ruleset</code> and <code>iptables-save</code> may require root or <code>CAP_NET_ADMIN</code>. The firewall view reports the exact error instead of failing silently.</li>
         <li>Toponux never runs <code>sudo</code>. If a command needs more privilege, run the server with the appropriate permissions yourself.</li>
-        <li>No command modifies interfaces, addresses, routes, rules or firewall state.</li>
+        <li>No command modifies interfaces, addresses, routes, rules, sockets or firewall state.</li>
       </ul>
 
       <h2 class="subheading">Known limits</h2>
@@ -196,8 +255,45 @@
         <li><code>STALE</code>, <code>DELAY</code> and <code>PROBE</code> entries can be outdated.</li>
         <li>Docker and virtual bridges hide their veth members; neighbours on those bridges are containers, not physical machines.</li>
         <li>Firewall parsing is lossless for nftables JSON, best-effort for iptables text.</li>
+        <li>Socket data is a snapshot of the current network namespace. Process names may be incomplete without sufficient privileges.</li>
         <li>Diagnostic results are observations at one moment, not proof of a permanent state.</li>
       </ul>
+    </section>
+
+    <section id="tab-changes" class="tab-content changes-view" role="tabpanel" aria-labelledby="tab-btn-changes">
+      <div class="table-toolbar">
+        <div><h2>Snapshot changes</h2><p>Compare the current snapshot with a baseline saved in this browser.</p></div>
+        <div class="fw-actions">
+          <button id="save-baseline" class="secondary" type="button">Save baseline</button>
+          <button id="clear-baseline" class="secondary" type="button">Clear baseline</button>
+        </div>
+      </div>
+      <div id="changes-status" class="notice"></div>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Listening ports</h2><p>Added or removed listening sockets.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Protocol</th><th>Local endpoint</th><th>Process</th></tr></thead><tbody id="listener-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Established connections</h2><p>Added or removed remote connections.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Protocol</th><th>Local endpoint</th><th>Remote endpoint</th><th>Process</th></tr></thead><tbody id="connection-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Interfaces</h2><p>Added or removed interfaces.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Interface</th><th>State</th><th>IP addresses</th></tr></thead><tbody id="interface-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Neighbours</h2><p>Added or removed neighbour entries.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Interface</th><th>MAC</th><th>Addresses</th></tr></thead><tbody id="neighbor-changes-body"></tbody></table></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="table-toolbar"><div><h2>Routes</h2><p>Added or removed routes.</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>Change</th><th>Family</th><th>Destination</th><th>Gateway</th><th>Device</th><th>Table</th></tr></thead><tbody id="route-changes-body"></tbody></table></div>
+      </section>
     </section>
 
     <section class="panel raw"><h2>Raw data</h2><details><summary>Show the full JSON snapshot</summary><pre id="raw-json"></pre></details></section>

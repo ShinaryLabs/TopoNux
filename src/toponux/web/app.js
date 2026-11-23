@@ -10,6 +10,8 @@ const graphStyle = [
   { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
   { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-host-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bridge"]', style: { 'background-color': cssVar('--graph-bridge-bg'), 'border-color': cssVar('--graph-bridge-border'), shape: 'round-rectangle' } },
+  { selector: 'node[kind="bond"]', style: { 'background-color': cssVar('--graph-bond-bg'), 'border-color': cssVar('--graph-bond-border'), shape: 'hexagon' } },
+  { selector: 'node[kind="vlan"]', style: { 'background-color': cssVar('--graph-vlan-bg'), 'border-color': cssVar('--graph-vlan-border'), 'border-style': 'dashed', shape: 'round-rectangle' } },
   { selector: 'node[kind="gateway"]', style: { 'background-color': cssVar('--graph-gateway-bg'), 'border-color': cssVar('--graph-gateway-border'), shape: 'diamond', width: 130, height: 90 } },
   { selector: 'node[kind="neighbor"]', style: { 'background-color': cssVar('--graph-neighbor-bg'), 'border-color': cssVar('--graph-neighbor-border'), shape: 'ellipse', width: 126, height: 46, 'font-size': 10 } },
   { selector: 'node[kind="neighbor"][?docker]', style: { 'border-style': 'dashed' } },
@@ -20,9 +22,41 @@ const graphStyle = [
 function countRules(rules = {}) { return (Array.isArray(rules.ipv4) ? rules.ipv4.length : 0) + (Array.isArray(rules.ipv6) ? rules.ipv6.length : 0); }
 function allRoutes() { return Object.entries(snapshot.routes || {}).flatMap(([family, routes]) => (Array.isArray(routes) ? routes : []).map(route => ({ family, ...route }))); }
 function interfaceAddresses(iface) { return (iface.addr_info || []).map(a => `${a.local}/${a.prefixlen}`); }
+function formatBytes(value) {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let amount = Number(value);
+  let unit = 0;
+  while (amount >= 1024 && unit < units.length - 1) { amount /= 1024; unit += 1; }
+  return `${amount.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+}
+function interfaceTraffic(iface) {
+  const stats = iface.stats || {};
+  return `↓ ${formatBytes(stats.rx_bytes)}<br>↑ ${formatBytes(stats.tx_bytes)}`;
+}
+function interfaceHealth(iface) {
+  const stats = iface.stats || {};
+  const errors = (stats.rx_errors || 0) + (stats.tx_errors || 0);
+  const dropped = (stats.rx_dropped || 0) + (stats.tx_dropped || 0);
+  if (!errors && !dropped) return '—';
+  return `${errors} errors<br>${dropped} dropped`;
+}
 function interfaceHaystack(iface) {
   return [iface.ifname, iface.link_type, iface.operstate, iface.master, iface.mtu, ...interfaceAddresses(iface)]
     .filter(value => value != null).join(' ').toLowerCase();
+}
+function l2Index() {
+  const links = snapshot.l2 && Array.isArray(snapshot.l2.links) ? snapshot.l2.links : [];
+  return Object.fromEntries(links.filter(link => link.ifname).map(link => [link.ifname, link]));
+}
+function l2Label(iface, index = l2Index()) {
+  const link = index[iface.ifname] || iface;
+  const info = link.linkinfo || {};
+  const data = info.info_data || {};
+  if (info.info_kind === 'vlan') return `vlan ${data.id ?? '?'} on ${data.link || '?'}`;
+  if (info.info_kind === 'bond') return `bond ${data.mode || ''}`.trim();
+  if (info.info_kind === 'bridge') return 'bridge';
+  return iface.master ? `master ${iface.master}` : '';
 }
 function routeHaystack(route) {
   const { family, dst, gateway, dev, table, type, scope, metric, flags } = route;
@@ -54,10 +88,46 @@ function renderGraph() {
   cy.on('tap', 'node', event => showDetails(event.target.data()));
   cy.on('tap', event => { if (event.target === cy) { $('detail-hint').textContent = 'Select an element in the graph.'; $('details').textContent = 'Nothing selected.'; } });
 }
+function renderNeighbors() {
+  const filter = ($('neighbor-filter')?.value || '').trim().toLowerCase();
+  const rows = (snapshot.neighbors_view || []).filter(n => {
+    if (!filter) return true;
+    const haystack = [n.mac, n.oui, n.vendor, n.interface, n.state, ...(n.addresses || [])].join(' ').toLowerCase();
+    return haystack.includes(filter);
+  });
+  $('neighbors-body').innerHTML = rows.map(n => `<tr><td><strong>${escapeHtml(n.mac)}</strong></td><td>${escapeHtml(n.vendor)}<small>${escapeHtml(n.oui)}</small></td><td>${escapeHtml(n.interface)}${n.docker ? ' <small>Docker</small>' : ''}</td><td>${escapeHtml(n.state)}</td><td>${(n.addresses || []).map(escapeHtml).join('<br>') || '—'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No neighbour entries.</td></tr>';
+}
+function socketProcesses(item) {
+  return (item.processes || []).map(process => `${process.name} (${process.pid})`).join(', ') || '—';
+}
+function socketEndpoint(item, addressKey, portKey) {
+  const port = item[portKey];
+  return `${item[addressKey] || '—'}${port == null ? '' : `:${port}`}`;
+}
+function socketHaystack(item) {
+  return [item.protocol, item.state, item.local_address, item.local_port, item.peer_address, item.peer_port, ...(item.processes || []).flatMap(process => [process.name, process.pid])]
+    .filter(value => value != null).join(' ').toLowerCase();
+}
+function renderPorts() {
+  const view = snapshot.sockets_view || { available: false, listeners: [], connections: [], error: 'Socket inventory unavailable.' };
+  const message = $('ports-message');
+  if (!view.available) {
+    message.textContent = `Socket inventory unavailable: ${view.error || 'ss could not be read.'}`;
+  } else {
+    message.textContent = `${(view.listeners || []).length} listening socket(s) · ${(view.connections || []).length} established connection(s) to remote peers.`;
+  }
+  const listenerFilter = $('listener-filter').value.trim().toLowerCase();
+  const connectionFilter = $('connection-filter').value.trim().toLowerCase();
+  const listeners = (view.listeners || []).filter(item => !listenerFilter || socketHaystack(item).includes(listenerFilter));
+  const connections = (view.connections || []).filter(item => !connectionFilter || socketHaystack(item).includes(connectionFilter));
+  $('listeners-body').innerHTML = listeners.map(item => `<tr><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(item.local_address)}</td><td>${escapeHtml(item.local_port ?? '—')}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`).join('') || '<tr><td colspan="4" class="empty">No listening socket.</td></tr>';
+  $('connections-body').innerHTML = connections.map(item => `<tr><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(item.state)}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">No established connection to a remote peer.</td></tr>';
+}
 function renderInterfaces() {
   const filter = $('interface-filter').value.trim().toLowerCase();
-  const rows = (snapshot.interfaces || []).filter(i => !filter || interfaceHaystack(i).includes(filter));
-  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml(i.link_type || '—')}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No matching interface.</td></tr>';
+  const l2 = l2Index();
+  const rows = (snapshot.interfaces || []).filter(i => !filter || interfaceHaystack(i).includes(filter) || l2Label(i, l2).toLowerCase().includes(filter));
+  $('interfaces-body').innerHTML = rows.map(i => `<tr><td><strong>${escapeHtml(i.ifname)}</strong><small>${escapeHtml([i.link_type, l2Label(i, l2)].filter(Boolean).join(' · '))}</small></td><td>${escapeHtml(i.link_type)}</td><td><span class="state ${String(i.operstate).toLowerCase()}">${escapeHtml(i.operstate)}</span></td><td>${interfaceAddresses(i).map(escapeHtml).join('<br>') || '—'}</td><td>${interfaceTraffic(i)}</td><td>${interfaceHealth(i)}</td><td>${escapeHtml(i.mtu)}</td><td>${escapeHtml(i.master || '—')}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No matching interface.</td></tr>';
 }
 function renderRoutes() {
   const filter = $('route-filter').value.trim().toLowerCase();
@@ -302,7 +372,7 @@ function renderSnapshot() {
   $('footer-time').textContent = new Date(snapshot.collected_at).toLocaleTimeString();
   $('errors').textContent = Object.keys(snapshot.errors || {}).length ? JSON.stringify(snapshot.errors, null, 2) : 'No errors reported.';
   $('raw-json').textContent = JSON.stringify(snapshot, null, 2);
-  renderFirewall(); renderInterfaces(); renderRoutes(); renderGraph();
+  renderFirewall(); renderInterfaces(); renderNeighbors(); renderPorts(); renderChanges(); renderRoutes(); renderGraph();
 }
 let activeDiagnostic = null;
 
@@ -319,8 +389,117 @@ async function refresh() {
   try {
     const result = await readJson(await fetch('/api/graph', { cache: 'no-store' }));
     snapshot = result.snapshot; graph = result.graph; renderSnapshot();
-  } catch (error) { $('errors').textContent = String(error); }
+    return true;
+  } catch (error) { $('errors').textContent = String(error); return false; }
   finally { $('refresh').disabled = false; $('refresh').textContent = 'Refresh'; }
+}
+function setScanState(busy, message, isError = false) {
+  const button = $('scan-subnet');
+  const status = $('scan-status');
+  button.disabled = busy;
+  button.classList.toggle('busy', busy);
+  button.setAttribute('aria-busy', String(busy));
+  status.textContent = message;
+  status.classList.toggle('error', isError);
+}
+async function scanSubnet() {
+  setScanState(true, 'Scanning local IPv4 subnets…');
+  try {
+    const result = await readJson(await fetch('/api/tools/scan', { method: 'POST' }));
+    if (!result.available) throw new Error(result.error || 'Subnet scan is unavailable.');
+    setScanState(true, `${result.message} Refreshing the neighbour cache…`);
+    const refreshed = await refresh();
+    setScanState(false, refreshed ? `${result.message} Graph refreshed.` : `${result.message} Graph refresh failed.`, !refreshed);
+  } catch (error) {
+    setScanState(false, `Scan failed: ${error.message}`, true);
+  }
+}
+const BASELINE_KEY = 'toponux-baseline';
+function loadBaseline() {
+  try {
+    const raw = localStorage.getItem(BASELINE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveBaselineSnapshot() {
+  const status = $('changes-status');
+  if (!snapshot || !snapshot.collected_at) { status.textContent = 'Load a snapshot before saving a baseline.'; status.classList.add('error'); return; }
+  status.classList.remove('error');
+  try {
+    const baseline = {
+      collected_at: snapshot.collected_at,
+      interfaces: snapshot.interfaces || [],
+      routes: snapshot.routes || {},
+      neighbors_view: snapshot.neighbors_view || [],
+      sockets_view: snapshot.sockets_view || { listeners: [], connections: [] },
+    };
+    localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline));
+    renderChanges();
+    status.textContent = `Baseline saved from ${new Date(baseline.collected_at).toLocaleString()}.`;
+  } catch (error) {
+    status.textContent = `Could not save baseline: ${error.message}`;
+    status.classList.add('error');
+  }
+}
+function clearBaselineSnapshot() {
+  try { localStorage.removeItem(BASELINE_KEY); } catch {}
+  renderChanges();
+  $('changes-status').textContent = 'Baseline cleared.';
+  $('changes-status').classList.remove('error');
+}
+function flatRoutes(snapshotData) {
+  return Object.entries(snapshotData.routes || {}).flatMap(([family, routes]) =>
+    (Array.isArray(routes) ? routes : []).map(route => ({ family, ...route })));
+}
+function diffByKey(currentItems, baselineItems, keyFn) {
+  const baselineKeys = new Set((baselineItems || []).map(keyFn));
+  const currentKeys = new Set((currentItems || []).map(keyFn));
+  return {
+    added: (currentItems || []).filter(item => !baselineKeys.has(keyFn(item))),
+    removed: (baselineItems || []).filter(item => !currentKeys.has(keyFn(item))),
+  };
+}
+function renderChanges() {
+  const baseline = loadBaseline();
+  const status = $('changes-status');
+  status.classList.remove('error');
+  if (!baseline) {
+    status.textContent = 'No baseline saved. Load a snapshot, then click Save baseline.';
+    ['interface-changes-body', 'neighbor-changes-body', 'route-changes-body', 'listener-changes-body', 'connection-changes-body'].forEach(id => {
+      $(id).innerHTML = '<tr><td colspan="10" class="empty">No baseline to compare.</td></tr>';
+    });
+    return;
+  }
+  status.textContent = `Baseline: ${new Date(baseline.collected_at).toLocaleString()} · Current: ${new Date(snapshot.collected_at).toLocaleString()}`;
+  const interfaceDiff = diffByKey(snapshot.interfaces || [], baseline.interfaces || [], item => item.ifname);
+  $('interface-changes-body').innerHTML = [
+    ...interfaceDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(item.ifname)}</td><td>${escapeHtml(item.operstate || '—')}</td><td>${escapeHtml(interfaceAddresses(item).join(', ') || '—')}</td></tr>`),
+    ...interfaceDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(item.ifname)}</td><td>${escapeHtml(item.operstate || '—')}</td><td>${escapeHtml(interfaceAddresses(item).join(', ') || '—')}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const neighborDiff = diffByKey(snapshot.neighbors_view || [], baseline.neighbors_view || [], item => `${item.interface}|${item.mac}`);
+  $('neighbor-changes-body').innerHTML = [
+    ...neighborDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(item.interface)}</td><td>${escapeHtml(item.mac)}</td><td>${escapeHtml((item.addresses || []).join(', ') || '—')}</td></tr>`),
+    ...neighborDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(item.interface)}</td><td>${escapeHtml(item.mac)}</td><td>${escapeHtml((item.addresses || []).join(', ') || '—')}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const routeDiff = diffByKey(flatRoutes(snapshot), flatRoutes(baseline), item => `${item.family}|${item.dst || 'default'}|${item.gateway || ''}|${item.dev || ''}|${item.table || 'main'}|${item.metric ?? ''}`);
+  $('route-changes-body').innerHTML = [
+    ...routeDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.family).toUpperCase())}</td><td>${escapeHtml(item.dst || 'default')}</td><td>${escapeHtml(item.gateway || '—')}</td><td>${escapeHtml(item.dev || '—')}</td><td>${escapeHtml(item.table || 'main')}</td></tr>`),
+    ...routeDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.family).toUpperCase())}</td><td>${escapeHtml(item.dst || 'default')}</td><td>${escapeHtml(item.gateway || '—')}</td><td>${escapeHtml(item.dev || '—')}</td><td>${escapeHtml(item.table || 'main')}</td></tr>`),
+  ].join('') || '<tr><td colspan="6" class="empty">No change.</td></tr>';
+
+  const listenerDiff = diffByKey((snapshot.sockets_view || {}).listeners || [], (baseline.sockets_view || {}).listeners || [], item => `${item.protocol}|${item.local_address}|${item.local_port}`);
+  $('listener-changes-body').innerHTML = [
+    ...listenerDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+    ...listenerDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+  ].join('') || '<tr><td colspan="4" class="empty">No change.</td></tr>';
+
+  const connectionDiff = diffByKey((snapshot.sockets_view || {}).connections || [], (baseline.sockets_view || {}).connections || [], item => `${item.protocol}|${item.local_address}|${item.local_port}|${item.peer_address}|${item.peer_port}`);
+  $('connection-changes-body').innerHTML = [
+    ...connectionDiff.added.map(item => `<tr><td class="change-added">Added</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+    ...connectionDiff.removed.map(item => `<tr><td class="change-removed">Removed</td><td>${escapeHtml(String(item.protocol).toUpperCase())}</td><td>${escapeHtml(socketEndpoint(item, 'local_address', 'local_port'))}</td><td>${escapeHtml(socketEndpoint(item, 'peer_address', 'peer_port'))}</td><td>${escapeHtml(socketProcesses(item))}</td></tr>`),
+  ].join('') || '<tr><td colspan="5" class="empty">No change.</td></tr>';
 }
 
 document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => {
@@ -334,6 +513,9 @@ document.querySelectorAll('.tab').forEach(button => button.addEventListener('cli
   if (button.dataset.tab === 'firewall' && fwCy) { fwCy.resize(); fwCy.fit(undefined, 30); }
 }));
 $('interface-filter').addEventListener('input', renderInterfaces);
+$('neighbor-filter').addEventListener('input', renderNeighbors);
+$('listener-filter').addEventListener('input', renderPorts);
+$('connection-filter').addEventListener('input', renderPorts);
 $('route-filter').addEventListener('input', renderRoutes);
 $('firewall-filter').addEventListener('input', event => {
   fwFilter = event.target.value.trim().toLowerCase();
@@ -363,9 +545,29 @@ $('firewall-families').addEventListener('click', event => {
   renderFirewallFlow(snapshot.firewall_view || {});
 });
 $('refresh').addEventListener('click', refresh);
+$('scan-subnet').addEventListener('click', scanSubnet);
+$('save-baseline').addEventListener('click', saveBaselineSnapshot);
+$('clear-baseline').addEventListener('click', clearBaselineSnapshot);
 ['graph-ipv6', 'graph-docker'].forEach(id => $(id).addEventListener('change', renderGraph));
 refresh();
 
+
+function renderIpv6Report(data) {
+  const lines = [
+    `Address     ${data.address}`,
+    `Expanded    ${data.exploded}`,
+    `Type        ${data.type}`,
+  ];
+  if (data.zone) lines.push(`Zone        ${data.zone}`);
+  if (data.prefixlen != null) lines.push(`Prefix      /${data.prefixlen} · network ${data.network}`);
+  if (data.well_known.length) lines.push(`Well-known  ${data.well_known.join(', ')}`);
+  lines.push('', `Header      ${data.binary} …`);
+  for (const flag of data.flags) lines.push(`  ${flag.name.padEnd(6)} ${flag.value}  ${flag.meaning}`);
+  if (data.multicast_scope) lines.push(`  Scope value ${data.multicast_scope}`);
+  const properties = Object.entries(data.properties).filter(([, value]) => value).map(([name]) => name.replaceAll('_', ' '));
+  lines.push('', `Properties  ${properties.join(', ') || 'none'}`, `Reverse DNS ${data.reverse_dns}`);
+  return lines.join('\n');
+}
 
 async function postDiagnostic(path, payload, outputId, button) {
   const output = $(outputId);
@@ -386,6 +588,64 @@ async function postDiagnostic(path, payload, outputId, button) {
     if (activeDiagnostic === controller) activeDiagnostic = null;
   }
 }
-$('run-ping').addEventListener('click', () => postDiagnostic('/api/tools/ping', {target:$('path-target').value, count:Number($('ping-count').value)}, 'path-result', $('run-ping')));
+function downloadText(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function firewallRulesCsv(view) {
+  const rows = [['table', 'family', 'chain', 'handle', 'verdict', 'target', 'matches', 'comment', 'packets', 'bytes']];
+  for (const table of view.tables || []) {
+    for (const chain of table.chains || []) {
+      for (const rule of chain.rules || []) {
+        const counter = rule.counter || {};
+        rows.push([
+          table.name, table.family, chain.name, rule.handle ?? '', rule.verdict || '', rule.target || '',
+          (rule.matches || []).map(match => match.text).join('; '), rule.comment || '',
+          counter.packets ?? '', counter.bytes ?? '',
+        ]);
+      }
+    }
+  }
+  return rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+}
+
+$('fw-copy-command').addEventListener('click', async () => {
+  const view = snapshot.firewall_view || {};
+  const command = view.command || (view.backend === 'iptables' ? 'iptables-save' : 'nft -j list ruleset');
+  try {
+    await navigator.clipboard.writeText(command);
+    $('firewall-message').textContent = `Copied: ${command}`;
+  } catch (error) {
+    $('firewall-message').textContent = command;
+  }
+});
+$('fw-export-json').addEventListener('click', () => {
+  downloadText('toponux-firewall.json', JSON.stringify(snapshot.firewall_view || {}, null, 2), 'application/json');
+});
+$('fw-export-csv').addEventListener('click', () => {
+  downloadText('toponux-firewall.csv', firewallRulesCsv(snapshot.firewall_view || {}), 'text/csv');
+});
 $('run-trace').addEventListener('click', () => postDiagnostic('/api/tools/trace', {target:$('path-target').value, max_hops:Number($('trace-hops').value)}, 'path-result', $('run-trace')));
 $('port-form').addEventListener('submit', event => { event.preventDefault(); postDiagnostic('/api/tools/port', {target:$('port-target').value, port:Number($('port-number').value), timeout:Number($('port-timeout').value)}, 'port-result', $('port-form').querySelector('button')); });
+$('ipv6-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const output = $('ipv6-result');
+  const button = event.target.querySelector('button');
+  button.disabled = true; output.textContent = 'Inspecting…';
+  try {
+    const response = await fetch('/api/tools/ipv6', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({target:$('ipv6-target').value})});
+    output.textContent = renderIpv6Report(await readJson(response));
+  } catch (error) {
+    output.textContent = `Error: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+});

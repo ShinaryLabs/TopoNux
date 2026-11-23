@@ -633,6 +633,7 @@ $('fw-export-json').addEventListener('click', () => {
 $('fw-export-csv').addEventListener('click', () => {
   downloadText('toponux-firewall.csv', firewallRulesCsv(snapshot.firewall_view || {}), 'text/csv');
 });
+$('run-ping').addEventListener('click', () => postDiagnostic('/api/tools/ping', {target:$('path-target').value, count:Number($('ping-count').value)}, 'path-result', $('run-ping')));
 $('run-trace').addEventListener('click', () => postDiagnostic('/api/tools/trace', {target:$('path-target').value, max_hops:Number($('trace-hops').value)}, 'path-result', $('run-trace')));
 $('port-form').addEventListener('submit', event => { event.preventDefault(); postDiagnostic('/api/tools/port', {target:$('port-target').value, port:Number($('port-number').value), timeout:Number($('port-timeout').value)}, 'port-result', $('port-form').querySelector('button')); });
 $('ipv6-form').addEventListener('submit', async event => {

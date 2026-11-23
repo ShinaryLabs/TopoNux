@@ -346,11 +346,17 @@ def inspect_ipv6(target: str) -> dict:
     categories = [label for network, label in _IPV6_TYPES if address in network]
     well_known = [label for network, label in _WELL_KNOWN_MULTICAST if address in network]
     unscoped = ipaddress.IPv6Address(int(address))
+    # ipaddress can retain a zone id in the textual forms below, but
+    # ``exploded`` (and ``reverse_pointer``) reject it on Python < 3.13.
+    zone = address.scope_id
+    exploded = unscoped.exploded
+    if zone:
+        exploded = f"{exploded}%{zone}"
 
     result = {
         "address": str(address),
         "compressed": address.compressed,
-        "exploded": address.exploded,
+        "exploded": exploded,
         "type": address_type,
         "categories": categories,
         "well_known": well_known,

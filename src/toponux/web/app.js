@@ -7,7 +7,7 @@ const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyV
 
 const graphStyle = [
   { selector: 'node', style: { label: 'data(label)', 'text-wrap': 'wrap', 'text-max-width': 170, 'font-size': 11, color: cssVar('--graph-label'), 'text-valign': 'center', 'text-halign': 'center', width: 150, height: 66, 'background-color': cssVar('--graph-node-bg'), 'border-width': 1, 'border-color': cssVar('--graph-node-border'), padding: 8 } },
-  { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
+  { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), color: '#ffffff', width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
   { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-host-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bridge"]', style: { 'background-color': cssVar('--graph-bridge-bg'), 'border-color': cssVar('--graph-bridge-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bond"]', style: { 'background-color': cssVar('--graph-bond-bg'), 'border-color': cssVar('--graph-bond-border'), shape: 'hexagon' } },
@@ -155,13 +155,13 @@ const fwStyle = [
   { selector: 'node', style: { label: 'data(label)', 'font-size': 10, 'text-valign': 'center', 'text-halign': 'center', width: 118, height: 34, 'background-color': cssVar('--graph-node-bg'), 'border-width': 1, 'border-color': cssVar('--graph-node-border'), color: cssVar('--graph-label'), 'text-wrap': 'ellipsis', 'text-max-width': 108 } },
   { selector: 'node[kind="hook"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), 'font-weight': 700, width: 138 } },
   { selector: 'node[kind="verdict"]', style: { shape: 'round-rectangle', width: 92, height: 30, 'font-weight': 700 } },
-  { selector: 'node[verdict="accept"]', style: { 'background-color': '#064e3b', 'border-color': '#34d399', color: '#a7f3d0' } },
-  { selector: 'node[verdict="drop"]', style: { 'background-color': '#7f1d1d', 'border-color': '#f87171', color: '#fecaca' } },
-  { selector: 'node[verdict="reject"]', style: { 'background-color': '#7c2d12', 'border-color': '#fb923c', color: '#fed7aa' } },
-  { selector: 'node[verdict="jump"]', style: { 'background-color': '#1e3a8a', 'border-color': '#60a5fa', color: '#bfdbfe' } },
-  { selector: 'node[verdict="nat"]', style: { 'background-color': '#4c1d95', 'border-color': '#c084fc', color: '#e9d5ff' } },
-  { selector: 'node[verdict="return"]', style: { 'background-color': '#78350f', 'border-color': '#fbbf24', color: '#fde68a' } },
-  { selector: 'node[verdict="log"]', style: { 'background-color': '#334155', 'border-color': '#94a3b8' } },
+  { selector: 'node[verdict="accept"]', style: { 'background-color': '#DCFCE7', 'border-color': '#00C758', color: '#00C758' } },
+  { selector: 'node[verdict="drop"]', style: { 'background-color': '#FB2C36', 'border-color': '#FB2C36', color: '#FB2C36' } },
+  { selector: 'node[verdict="reject"]', style: { 'background-color': '#FB2C36', 'border-color': '#FB2C36', color: '#FB2C36' } },
+  { selector: 'node[verdict="jump"]', style: { 'background-color': '#3080FF', 'border-color': '#F97015', color: '#FFFFFF' } },
+  { selector: 'node[verdict="nat"]', style: { 'background-color': '#8200DA', 'border-color': '#F3E8FF', color: '#F3E8FF' } },
+  { selector: 'node[verdict="return"]', style: { 'background-color': '#874B00', 'border-color': '#EDB200', color: '#EDB200' } },
+  { selector: 'node[verdict="log"]', style: { 'background-color': '#D1D5DC', 'border-color': '#797067' } },
   { selector: 'edge', style: { width: 1.5, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'font-size': 9, color: cssVar('--graph-edge-label'), label: 'data(label)', 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 2 } },
 ];
 
@@ -218,7 +218,7 @@ function groupMatchesFilter(group) {
 
 function renderFirewallGroup(group) {
   const rule = group.rule;
-  const matches = (rule.matches || []).map(match => `<span class="fw-match kind-${escapeHtml(match.kind)}">${escapeHtml(match.text)}</span>`).join('');
+  const matches = (rule.matches || []).map(match => `<span class="fw-match kind-${escapeHtml(match.kind)}">${escapeHtml(match.text)}</span>`).join(' ');
   const variants = group.count > 1 ? new Set(group.rules.map(item => (item.matches || []).map(m => m.text).join('|'))).size : 0;
   const title = group.count > 1 ? group.rules.map(item => (item.matches || []).map(m => m.text).join(' ')).join('\n') : '';
   const counter = group.counter;

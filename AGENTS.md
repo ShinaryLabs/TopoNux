@@ -361,7 +361,17 @@ Les agents peuvent utiliser les commandes Git en lecture seule pour examiner l'�
 
 **Le commit final est toujours une action manuelle réalisée exclusivement par l'utilisateur.**
 
-## 13. Documentation et maintenance du README
+## 13. Design System
+
+- Avant toute modification frontend, consulter obligatoirement DESIGN.md.
+- Respecter les règles visuelles et les composants définis.
+- Ne jamais créer de nouveaux styles sans vérifier
+  les composants et design tokens existants.
+- Toute évolution du design system doit être répercutée
+  dans DESIGN.md.
+- Vérifier visuellement les pages après chaque évolution UI.
+
+## 14. Documentation et maintenance du README
 
 **Le fichier README.md doit être maintenu à jour à chaque modification du projet.**
 

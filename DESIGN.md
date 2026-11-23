@@ -1,360 +1,898 @@
----
-version: alpha
-name: Evreghen Command Center
-description: "Warm off-white security workspace with a dark frosted application shell and orange telemetry accents."
-colors:
-  background: "#fcfaf7"
-  on-background: "#423d38"
-  surface: "#f3f4f6"
-  surface-soft: "#edebe9"
-  surface-elevated: "#ffffff"
-  on-surface: "#423d38"
-  on-surface-muted: "#797067"
-  outline: "#e3e0dd"
-  outline-strong: "#d1d5dc"
-  primary: "#fe6e00"
-  primary-strong: "#ff6b00"
-  primary-warm: "#ffb74d"
-  primary-focus: "#f97015"
-  on-primary: "#ffffff"
-  shell-base: "#000000"
-  on-shell: "#ffffff"
-  shell-border: "#ffffff"
-  success: "#00c758"
-  warning: "#edb200"
-  danger: "#fb2c36"
-  info: "#3080ff"
-  status-mock-bg: "#fef9c2"
-  status-mock-fg: "#874b00"
-  status-planned-bg: "#f3f4f6"
-  status-planned-fg: "#364153"
-  status-development-bg: "#dbeafe"
-  status-development-fg: "#1447e6"
-  status-integrated-bg: "#f3e8ff"
-  status-integrated-fg: "#8200da"
-  status-production-bg: "#dcfce7"
-  status-production-fg: "#016630"
-  dark-background: "#413830"
-  dark-surface: "#4a423a"
-  dark-on-surface: "#fafaf9"
-  dark-on-surface-muted: "#b9b3ac"
-typography:
-  display-hero:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "6rem"
-    fontWeight: 600
-    lineHeight: 1
-    letterSpacing: "-0.025em"
-  headline-xl:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "2rem"
-    fontWeight: 700
-    lineHeight: "2.5rem"
-    letterSpacing: "-0.025em"
-  headline-lg:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.5rem"
-    fontWeight: 700
-    lineHeight: "2rem"
-  title-md:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1.125rem"
-    fontWeight: 700
-    lineHeight: "1.75rem"
-  body-lg:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: "1.5rem"
-  body-md:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: "1.25rem"
-  body-sm:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.8125rem"
-    fontWeight: 700
-    lineHeight: "1rem"
-  label-md:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 500
-    lineHeight: "1.25rem"
-  label-sm:
-    fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.75rem"
-    fontWeight: 600
-    lineHeight: "1rem"
-    letterSpacing: "0.05em"
-  code-sm:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: "1.25rem"
-rounded:
-  xs: "4px"
-  sm: "6px"
-  md: "8px"
-  lg: "12px"
-  pill: "9999px"
-spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-  "2xl": "32px"
-  "3xl": "40px"
-  "4xl": "64px"
-  container-padding: "32px"
-layout:
-  container-max: "1400px"
-  shell-header-height: "64px"
-  shell-sidebar-expanded: "256px"
-  shell-sidebar-collapsed: "64px"
-motion:
-  fast: "150ms"
-  normal: "200ms"
-  slow: "300ms"
-  panel: "500ms"
-  easing-standard: "cubic-bezier(0.4, 0, 0.2, 1)"
-elevation:
-  shell-blur: "12px"
-  shell-opacity: "0.70"
-  shell-border-opacity: "0.10"
-  chart-fill-opacity: "0.60"
-shadows:
-  subtle: "0 1px 3px rgba(0, 0, 0, 0.10), 0 1px 2px rgba(0, 0, 0, 0.06)"
-  raised: "0 4px 12px rgba(0, 0, 0, 0.12)"
-  dialog: "0 20px 25px rgba(0, 0, 0, 0.10), 0 8px 10px rgba(0, 0, 0, 0.04)"
-components:
-  shell-sidebar:
-    backgroundColor: "rgba(0, 0, 0, 0.70)"
-    textColor: "{colors.on-shell}"
-    rounded: "0px"
-    width: "{layout.shell-sidebar-expanded}"
-    padding: "{spacing.lg}"
-  shell-header:
-    backgroundColor: "rgba(0, 0, 0, 0.70)"
-    textColor: "{colors.on-shell}"
-    rounded: "0px"
-    height: "{layout.shell-header-height}"
-    padding: "0 16px"
-  nav-item:
-    backgroundColor: "transparent"
-    textColor: "rgba(255, 255, 255, 0.70)"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.md}"
-    padding: "6px 12px"
-  nav-item-active:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.md}"
-    padding: "6px 12px"
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.label-md}"
-    rounded: "{rounded.sm}"
-    height: "40px"
-    padding: "0 16px"
-  button-primary-hover:
-    backgroundColor: "{colors.primary-strong}"
-    textColor: "{colors.on-primary}"
-  button-ghost-shell:
-    backgroundColor: "transparent"
-    textColor: "rgba(255, 255, 255, 0.70)"
-    typography: "{typography.label-md}"
-    rounded: "{rounded.md}"
-    height: "40px"
-    width: "40px"
-  input-shell:
-    backgroundColor: "rgba(255, 255, 255, 0.10)"
-    textColor: "{colors.on-shell}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.sm}"
-    height: "36px"
-    padding: "0 12px"
-  card-panel:
-    backgroundColor: "transparent"
-    textColor: "{colors.on-background}"
-    typography: "{typography.body-md}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.xl}"
-  chart-bar:
-    backgroundColor: "rgba(254, 110, 0, 0.60)"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.xs}"
-  table-header:
-    backgroundColor: "rgba(254, 110, 0, 0.05)"
-    textColor: "{colors.primary-strong}"
-    typography: "{typography.label-sm}"
-    height: "48px"
-    padding: "0 16px"
-  table-cell:
-    backgroundColor: "transparent"
-    textColor: "{colors.on-surface-muted}"
-    typography: "{typography.body-md}"
-    padding: "8px 8px"
-  status-badge-mock:
-    backgroundColor: "{colors.status-mock-bg}"
-    textColor: "{colors.status-mock-fg}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  status-badge-planned:
-    backgroundColor: "{colors.status-planned-bg}"
-    textColor: "{colors.status-planned-fg}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  status-badge-development:
-    backgroundColor: "{colors.status-development-bg}"
-    textColor: "{colors.status-development-fg}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  status-badge-integrated:
-    backgroundColor: "{colors.status-integrated-bg}"
-    textColor: "{colors.status-integrated-fg}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  status-badge-production:
-    backgroundColor: "{colors.status-production-bg}"
-    textColor: "{colors.status-production-fg}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-  login-panel:
-    backgroundColor: "{colors.primary-strong}"
-    textColor: "{colors.on-primary}"
-    rounded: "0px"
-    padding: "{spacing.2xl}"
-  login-card:
-    backgroundColor: "{colors.surface-elevated}"
-    textColor: "{colors.on-surface}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.2xl}"
----
+# DESIGN.md --- Référentiel UI/UX de Difence
 
-## Overview
-Evreghen Command Center is a security operations interface that deliberately splits its personality into two layers. The workspace itself is light, warm, and document-like: an off-white canvas, neutral cards, restrained borders, and dense operational content. Around that workspace sits a darker application shell with a frosted-glass feel: black panels at 70% opacity, soft blur, thin white borders, and white navigation text. The product should feel like a modern SOC dashboard that borrows a little from premium automotive or command-console UI without becoming futuristic chrome.
+> **Statut :** référentiel de conception frontend\
+> **Produit :** Difence by Shinary\
+> **Type d'application :** plateforme SaaS B2B de supervision, de
+> contrôle et de cybersécurité\
+> **Langue de l'interface :** français par défaut\
+> **Priorités :** lisibilité, cohérence, efficacité opérationnelle,
+> sobriété et qualité d'exécution
 
-The emotional target is focused, technical, and slightly premium rather than playful. The UI is not flat-white enterprise software, but it also is not neon cyberpunk. It lives in the middle: calm neutrals for reading and scanning, with orange used as the dominant signal for action, telemetry, hover states, focus states, and brand presence.
+Ce document définit les règles visuelles et comportementales de
+l'interface de Difence. Il constitue la référence à respecter pour toute
+création ou modification frontend.
 
-Default presentation is light mode. Dark mode exists, but the product identity is still anchored in the light workspace with dark shell framing.
+Toute évolution doit renforcer la cohérence du produit. En cas de doute,
+privilégier la solution la plus simple, lisible, accessible et cohérente
+avec les composants existants.
 
-## Colors
-The visual identity revolves around warm neutrals plus a concentrated orange band.
+------------------------------------------------------------------------
 
-- **Background (`#FCFAF7`):** The primary page canvas. It should read as warm paper or light stone rather than stark white.
-- **Surface (`#F3F4F6`) and Surface Soft (`#EDEBE9`):** Secondary neutrals for app backgrounds, muted panels, table fills, and low-emphasis containers.
-- **Foreground (`#423D38`):** Main copy color. It is dark brown-gray rather than charcoal black, which keeps the UI warmer and softer.
-- **Muted Foreground (`#797067`):** Metadata, descriptions, secondary labels, and quiet table text.
-- **Primary Orange (`#FE6E00` / `#FF6B00`):** The live UI uses a narrow family of close oranges rather than one perfectly normalized accent. Use this family for active navigation, CTA fills, chart bars, icon hover states, prominent labels, and onboarding.
-- **Warm Orange (`#FFB74D`):** Gradient or brand warmth. This should be paired with the core orange, not used alone as the main action color.
-- **Focus Orange (`#F97015`):** Use for rings, active outlines, and theme-driven highlights.
-- **Shell Black (`#000000` rendered at 70% opacity):** Sidebar and top bar are never fully opaque. The shell should feel dark and glassy, not matte black.
-- **Status colors:** Yellow for mock/demo, gray for planned, blue for in-development, purple for integrated, and green for production-ready.
+## 1. Vision produit et direction artistique
 
-Orange should be visually dominant, but not everywhere. The product works because most surfaces stay neutral and let orange carry state, motion, and emphasis.
+Difence est un outil métier utilisé pour surveiller des sites, suivre
+des contrôles, traiter des alertes et gérer des incidents. L'interface
+doit inspirer confiance et permettre de comprendre rapidement une
+situation opérationnelle.
 
-## Typography
-The system uses the browser’s default sans stack rather than a branded webfont. That matters: the voice is practical, fast-loading, and operational, not editorial or highly stylized.
+### 1.1 Positionnement visuel
 
-- **Primary typeface:** `ui-sans-serif, system-ui, sans-serif`.
-- **Monospace:** `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`.
-- **Page headlines:** Use bold weights and compact hierarchy. The main module title sits at `1.5rem` with strong weight rather than oversized hero typography.
-- **Operational labels:** Small uppercase labels, especially in cards and tables, rely on wider tracking to feel structured and machine-like.
-- **Body copy:** Standard UI sizing with moderate line height. Text should stay compact enough for dashboards.
-- **Hero exception:** The onboarding map can use a much larger wordmark treatment, but this is a special-case brand moment, not the default page rhythm.
+Adopter une esthétique :
 
-Typography should feel crisp and legible first. Avoid decorative fonts, wide-display faces, or soft rounded consumer-product typography.
+-   Professionnelle, moderne et sobre.
+-   Technique, précise et rassurante.
+-   Élégante, sans être luxueuse ou décorative.
+-   Dense juste ce qu'il faut pour un outil de supervision.
+-   Cohérente avec les standards des meilleurs produits SaaS B2B.
 
-## Layout & Spacing
-The system is built on a familiar 4px Tailwind rhythm, but the page composition behaves more like a dashboard shell around a centered content document.
+Références d'inspiration :
 
-- **Container max width:** `1400px` centered with `32px` horizontal padding.
-- **Shell proportions:** The top bar is `64px` tall. The sidebar is `256px` expanded and `64px` collapsed.
-- **Content rhythm:** Most page sections use `24px` vertical spacing. Metric cards and multi-column blocks use `16px` gaps.
-- **Card padding:** Standard content cards use `24px` internal padding.
-- **Table density:** Tables are relatively compact. Headers are `48px` tall, and cells rely on small body text and narrow padding.
-- **Login/onboarding layout:** The entry screen is split into two equal halves, with a white visualization panel on one side and a saturated orange panel on the other.
+-   **Linear** : sobriété, typographie, espacements et qualité des
+    interactions.
+-   **Vercel** : interfaces techniques, tableaux et composants.
+-   **Sentry** : alertes, incidents et informations de supervision.
+-   **Grafana** : visualisation et lecture de données opérationnelles.
 
-This is not a sparse marketing layout. Density is moderate, but spacing is consistent and never cramped.
+Ces références sont des sources d'inspiration, pas des modèles à
+recopier. Difence doit conserver sa propre identité.
 
-## Elevation & Depth
-Depth comes from two different strategies depending on the layer.
+### 1.2 Principes fondamentaux
 
-- **Application shell:** The sidebar and header use blur plus transparency. They should feel like dark glass laid over the workspace.
-- **Workspace cards:** Cards use subtle borders and standard UI shadows, but remain visually quiet. They should not look glossy or heavy.
-- **Dialogs, dropdowns, and sheets:** These can use stronger shadows than normal cards, but should stay within the same neutral/orange system.
-- **Charts and telemetry bars:** Orange fills use opacity rather than full saturation so they integrate with the quiet surrounding panels.
+1.  La fonction prime sur la décoration.
+2.  Les informations importantes doivent être visibles immédiatement.
+3.  Les composants similaires doivent avoir le même comportement et le
+    même rendu.
+4.  Les couleurs ont une signification fonctionnelle.
+5.  Les animations doivent aider à comprendre une interaction, jamais
+    ralentir l'utilisateur.
+6.  La densité d'information doit rester adaptée à un outil
+    professionnel.
+7.  Chaque page doit sembler appartenir au même produit.
 
-The product should never feel flat, but the depth model is restrained. Use blur for chrome, soft shadows for surfaces, and border definition everywhere else.
+------------------------------------------------------------------------
 
-## Shapes
-Corner treatment is consistent and slightly softened, but never bubbly.
+## 2. Identité visuelle et couleurs
 
-- **Base control radius:** `8px`.
-- **Tight controls / inputs:** `6px`.
-- **Cards:** `12px`.
-- **Pills and badges:** fully rounded.
-- **Chrome panels:** square-edged at the macro level, with rounding reserved for internal interactive elements.
+La marque conserve une dominante bleue, mais le bleu ne doit pas envahir
+toute l'interface. Il est utilisé pour la navigation, les actions
+principales et les éléments interactifs.
 
-This should feel sturdy and contemporary. Avoid sharp corners on controls, but do not push the product into overly rounded consumer-app territory.
+### 2.1 Palette de référence
 
-## Components
-### Shell
-The sidebar and top bar are the strongest visual signature. They are black at 70% opacity with a 12px blur and a faint white border. Text inside them is white or white at reduced opacity. Active and hovered navigation items flip to solid orange fills with white text.
+Les valeurs ci-dessous constituent la palette de départ. Les centraliser
+dans les design tokens du projet afin d'éviter les couleurs codées en
+dur dans les composants.
 
-### Buttons
-Primary buttons are saturated orange with white text. The shape is compact and practical, not oversized. Ghost buttons inside the shell remain transparent until hover, then take on orange or translucent white states depending on context.
+  Token                    Valeur      Usage
+  ------------------------ ----------- ----------------------------------
+  `color-brand-900`        `#1E3A8A`   Bleu profond, éléments de marque
+  `color-brand-800`        `#1E40AF`   Sidebar et identité principale
+  `color-primary`          `#2563EB`   Actions principales et liens
+  `color-primary-hover`    `#1D4ED8`   Survol des actions principales
+  `color-primary-active`   `#1E40AF`   État actif
+  `color-primary-subtle`   `#EFF6FF`   Fonds bleus légers
+  `color-primary-border`   `#BFDBFE`   Bordures de focus ou sélection
+  `color-background`       `#F8FAFC`   Fond général de l'application
+  `color-surface`          `#FFFFFF`   Cartes, panneaux et fenêtres
+  `color-surface-muted`    `#F1F5F9`   Surfaces secondaires
+  `color-text-primary`     `#172033`   Texte principal
+  `color-text-secondary`   `#64748B`   Texte secondaire
+  `color-text-muted`       `#94A3B8`   Métadonnées et aides
+  `color-border`           `#E2E8F0`   Bordures standard
+  `color-border-strong`    `#CBD5E1`   Séparateurs plus visibles
+  `color-success`          `#16A36A`   État opérationnel
+  `color-success-bg`       `#DCFCE7`   Fond de succès
+  `color-warning`          `#D97706`   Avertissement
+  `color-warning-bg`       `#FEF3C7`   Fond d'avertissement
+  `color-danger`           `#DC4C4C`   Erreur et criticité
+  `color-danger-bg`        `#FEE2E2`   Fond d'erreur
+  `color-info`             `#2563EB`   Information
+  `color-info-bg`          `#DBEAFE`   Fond informatif
+  `color-success-strong`   `#0B7A4B`   Texte vert sur fond teinté
+  `color-warning-strong`   `#92400E`   Texte ambre sur fond teinté
+  `color-danger-strong`    `#B91C1C`   Texte rouge sur fond teinté
+  `color-info-strong`      `#1D4ED8`   Texte bleu sur fond teinté
 
-### Inputs
-There are two input personalities:
+Les variantes `*-strong` servent uniquement au texte posé sur un fond
+teinté de la même famille. Elles garantissent un contraste suffisant pour
+les badges et les libellés de statut de petite taille.
 
-- **Shell inputs:** translucent white-on-dark, used in the header search.
-- **Surface inputs:** neutral border inputs on white cards, used heavily in login and form contexts.
+### 2.2 Règles d'utilisation
 
-Both should preserve clean rectangular geometry and avoid deep inset styling.
+-   Utiliser `color-background` pour le fond principal, et
+    `color-surface` pour les zones de contenu.
+-   Réserver le bleu saturé aux actions, à la navigation active et aux
+    éléments qui nécessitent l'attention.
+-   Ne pas utiliser le bleu comme couleur de texte pour tous les
+    contenus.
+-   Utiliser les couleurs de statut uniquement lorsqu'elles portent une
+    signification métier.
+-   Vérifier le contraste entre texte et arrière-plan.
+-   Ne pas multiplier les couleurs d'accentuation dans une même zone.
+-   Ne pas ajouter de dégradés décoratifs sans justification
+    fonctionnelle.
 
-### Cards
-Most analytical content sits in neutral cards with soft shadows and thin borders. Cards are readable first and decorative second. Metric cards, chart cards, and table cards should all feel like members of the same quiet surface family.
+### 2.3 Couleurs des statuts
 
-### Tables
-There are two table idioms in the codebase:
+Les statuts doivent être identifiables par la couleur, le texte et,
+lorsque pertinent, une icône ou un point indicateur. Ne jamais
+communiquer une information uniquement par la couleur.
 
-- The newer app-router pages use neutral shadcn-style tables.
-- Legacy table styling uses orange borders, orange-tinted headers, and faint orange zebra striping.
+  -----------------------------------------------------------------------
+  Statut                  Couleur                 Présentation
+  ----------------------- ----------------------- -----------------------
+  Opérationnel            Vert                    Fond vert pâle, texte
+                                                  vert foncé
 
-When generating new work, prefer the neutral table base for general product consistency, but keep the orange-accented table language available for threat-analysis or legacy-heavy contexts where the product already leans more branded and high-signal.
+  Sous surveillance       Bleu                    Fond bleu pâle, texte
+                                                  bleu foncé
 
-### Status badges
-Status badges are important semantic cues. They should stay soft and readable:
+  Avertissement / Élevée  Ambre                   Fond ambre pâle, texte
+                                                  ambre foncé
 
-- Mock: pale yellow
-- Planned: soft gray
-- In Development: pale blue
-- Integrated: pale lavender
-- Production Ready: pale green
+  Indisponible            Ambre ou rouge selon la Fond teinté, libellé
+                          règle métier            explicite
 
-### Onboarding
-The login experience is bolder than the platform interior. It pairs a white global-map visualization with a vivid orange panel and a white login card. This is one place where the system can feel more branded and dramatic.
+  Anomalie détectée       Rouge                   Fond rouge pâle, texte
+                                                  rouge foncé
 
-## Do's and Don'ts
-- Do keep the primary experience light, warm, and operational.
-- Do use the dark frosted shell as a framing device around the workspace.
-- Do let orange drive action, hover, focus, telemetry, and brand emphasis.
-- Do preserve compact system-sans typography and restrained spacing.
-- Do use white or translucent white inside the shell rather than warm gray text.
-- Do keep analytical cards quiet so charts, labels, and findings can stand out.
+  Critique                Rouge                   Mise en évidence forte
+                                                  mais sobre
 
-- Don’t replace the warm neutrals with pure white and cool grays.
-- Don’t introduce additional saturated brand colors beyond the established orange and semantic status palette.
-- Don’t turn the entire product into a dark dashboard; only the chrome should feel like dark glass by default.
-- Don’t make every card solid orange, heavily tinted, or dramatically shadowed.
-- Don’t swap in trendy geometric or editorial fonts; the system should remain practical and native-feeling.
+  Information             Bleu                    Fond bleu pâle, texte
+                                                  bleu foncé
+
+  Inactif / Inconnu       Gris                    Fond gris pâle, texte
+                                                  gris foncé
+  -----------------------------------------------------------------------
+
+Ne pas assimiler automatiquement « indisponible », « anomalie » et «
+critique » : conserver les distinctions métier définies par
+l'application.
+
+------------------------------------------------------------------------
+
+## 3. Typographie
+
+Utiliser **Inter** en priorité, ou la police sans-serif déjà intégrée au
+projet si elle offre un rendu équivalent. Éviter de multiplier les
+familles typographiques.
+
+### 3.1 Échelle typographique
+
+  Usage                         Taille    Graisse   Ligne indicative
+  -------------------- --------------- ---------- ------------------
+  Titre de page              26--28 px        700                1.2
+  Titre de section           18--20 px        600                1.3
+  Titre de carte             15--16 px        600                1.4
+  Texte courant                  14 px        400                1.5
+  Navigation                 13--14 px        500                1.4
+  Bouton                     13--14 px   500--600                1.2
+  Label                      12--13 px        500                1.4
+  Métadonnée             12 px minimum        400                1.4
+  En-tête de tableau         11--12 px        600                1.3
+
+Les tailles peuvent être adaptées à la densité d'une page, mais les
+textes essentiels ne doivent pas devenir difficiles à lire. Éviter les
+textes de 10 px ou moins.
+
+### 3.2 Hiérarchie
+
+-   Un seul titre principal `h1` par page.
+-   Structurer les sections avec des titres de niveau inférieur
+    cohérents.
+-   Distinguer les titres, descriptions, valeurs et métadonnées par la
+    taille, la graisse et la couleur.
+-   Ne pas utiliser le gras partout.
+-   Ne pas utiliser une couleur vive pour compenser une hiérarchie
+    typographique insuffisante.
+-   Les valeurs KPI doivent être visuellement dominantes par rapport à
+    leur libellé.
+
+### 3.3 Données numériques
+
+-   Utiliser des chiffres tabulaires lorsque possible pour les
+    compteurs, durées, dates et métriques.
+-   Conserver un format cohérent pour les dates, heures, pourcentages et
+    durées.
+-   Éviter les changements de largeur visuelle lors de l'actualisation
+    des compteurs.
+
+------------------------------------------------------------------------
+
+## 4. Espacements et grille
+
+Utiliser une échelle d'espacement cohérente basée sur des multiples de 4
+px.
+
+  Token          Valeur Usage indicatif
+  ------------ -------- -----------------------------------
+  `space-1`        4 px Écart minimal entre éléments liés
+  `space-2`        8 px Écart entre icône et libellé
+  `space-3`       12 px Espacement compact
+  `space-4`       16 px Espacement standard
+  `space-5`       20 px Espacement intermédiaire
+  `space-6`       24 px Séparation de blocs
+  `space-8`       32 px Séparation de sections
+  `space-10`      40 px Grande séparation
+  `space-12`      48 px Respiration importante
+
+Règles :
+
+-   Aligner les composants sur une grille commune.
+-   Garder des espacements internes homogènes dans les cartes.
+-   Éviter les éléments collés aux bords.
+-   Éviter les espaces vides excessifs qui réduisent la quantité
+    d'informations utiles visibles.
+-   Ne pas corriger un problème de mise en page en ajoutant des marges
+    arbitraires.
+-   Préférer une grille responsive aux largeurs fixes.
+
+------------------------------------------------------------------------
+
+## 5. Formes, bordures et ombres
+
+### 5.1 Rayons
+
+  Élément                    Rayon recommandé
+  ------------------------ ------------------
+  Petit contrôle, badge                  6 px
+  Bouton, champ, menu                    8 px
+  Carte, panneau                        10 px
+  Grande fenêtre / modal                12 px
+  Avatar                                 50 %
+
+Éviter de mélanger de nombreux rayons différents. Ne pas arrondir
+systématiquement tous les éléments en forme de pilule.
+
+### 5.2 Bordures
+
+-   Utiliser principalement une bordure de 1 px en `color-border`.
+-   Réserver les bordures plus contrastées aux séparations nécessaires,
+    aux sélections et aux états de focus.
+-   Éviter les contours gris épais.
+-   Ne pas cumuler bordure forte, ombre et fond contrasté sur un même
+    composant sans raison.
+
+### 5.3 Ombres
+
+Les ombres doivent être discrètes et exprimer une élévation réelle :
+menu, popover, modal ou élément flottant.
+
+-   Les cartes ordinaires peuvent se passer d'ombre.
+-   Ne pas utiliser d'ombres sombres ou de reliefs donnant un aspect
+    natif Windows.
+-   Préférer une séparation par fond et bordure légère.
+-   Les états hover ne doivent pas provoquer de saut de layout.
+
+------------------------------------------------------------------------
+
+## 6. Boutons et actions
+
+Tous les boutons doivent être construits à partir d'un petit nombre de
+variantes réutilisables. Ne pas créer un style spécifique pour chaque
+page.
+
+### 6.1 Variantes
+
+  -----------------------------------------------------------------------
+  Variante                Apparence               Usage
+  ----------------------- ----------------------- -----------------------
+  Primary                 Fond bleu, texte blanc  Action principale de la
+                                                  page ou du formulaire
+
+  Secondary               Fond blanc, bordure     Action secondaire
+                          discrète                
+
+  Tertiary / Ghost        Sans bordure permanente Actions peu fréquentes
+                                                  ou intégrées
+
+  Danger                  Fond ou texte rouge     Action destructive
+
+  Icon button             Contrôle carré homogène Action représentée
+                                                  clairement par une
+                                                  icône
+  -----------------------------------------------------------------------
+
+### 6.2 Dimensions
+
+-   Hauteur standard : 36 à 40 px.
+-   Hauteur compacte : 32 px, uniquement pour les contextes denses.
+-   Hauteur large : 44 px, pour les actions importantes ou certains
+    formulaires.
+-   Padding horizontal cohérent, généralement 12 à 16 px.
+-   Icône : 16 à 18 px.
+-   Espace icône/texte : 8 px.
+-   Rayon : 8 px.
+
+### 6.3 États interactifs
+
+Chaque bouton doit définir :
+
+-   Default.
+-   Hover.
+-   Active / Pressed.
+-   Focus visible.
+-   Disabled.
+-   Loading, si l'action est asynchrone.
+
+Transitions recommandées : 150 à 200 ms, avec une courbe d'accélération
+naturelle.
+
+Règles :
+
+-   Supprimer les styles natifs du navigateur.
+-   Ne jamais laisser apparaître de bordure ou d'ombre native
+    inattendue.
+-   Ne pas utiliser une ombre épaisse pour donner du relief.
+-   Préserver un feedback visuel clair.
+-   Désactiver réellement un bouton indisponible, et expliquer la raison
+    lorsque nécessaire.
+-   Ne pas utiliser un bouton uniquement décoratif : toute action
+    affichée doit fonctionner.
+
+------------------------------------------------------------------------
+
+## 7. Champs, filtres et formulaires
+
+Les champs doivent être homogènes dans toutes les pages.
+
+-   Hauteur standard : environ 40 px.
+-   Rayon : 8 px.
+-   Bordure : 1 px discrète.
+-   Fond blanc ou surface adaptée au contexte.
+-   Label visible et associé au champ.
+-   Placeholder utilisé comme exemple, jamais comme seul label.
+-   Icône intégrée uniquement si elle améliore la compréhension.
+-   États focus, erreur, désactivé et lecture seule clairement définis.
+-   Messages d'erreur courts, précis et placés près du champ concerné.
+
+Les filtres, recherches et sélecteurs doivent conserver une hauteur et
+un alignement cohérents. Les filtres actifs doivent être identifiables
+sans surcharger l'interface.
+
+------------------------------------------------------------------------
+
+## 8. Cartes, panneaux et KPI
+
+### 8.1 Cartes
+
+Les cartes servent à regrouper des informations liées, pas à encadrer
+chaque élément de l'interface.
+
+-   Fond blanc.
+-   Bordure légère.
+-   Rayon de 10 px.
+-   Padding homogène, généralement 16 à 20 px.
+-   Titre, contenu et actions clairement hiérarchisés.
+-   Ombre uniquement si nécessaire.
+-   Pas de bordure épaisse ou de décoration superflue.
+
+Ne pas multiplier les cartes imbriquées. Préférer une séparation par
+espacement ou par fond secondaire lorsque cela suffit.
+
+### 8.2 KPI
+
+Les cartes KPI doivent afficher :
+
+1.  Un libellé court.
+2.  Une valeur principale lisible.
+3.  Une variation ou un contexte secondaire, si disponible.
+4.  Un indicateur visuel discret lorsque pertinent.
+
+Les valeurs doivent être alignées et comparables entre elles. Les icônes
+sont secondaires par rapport aux chiffres. Ne pas ajouter une icône à
+chaque carte si elle n'apporte aucune information.
+
+------------------------------------------------------------------------
+
+## 9. Tableaux et listes de données
+
+Les tableaux sont des composants centraux d'un outil de supervision. Ils
+doivent permettre de parcourir rapidement de nombreuses lignes.
+
+### 9.1 Structure
+
+-   En-têtes clairement distingués du contenu.
+-   Libellés d'en-tête lisibles et suffisamment contrastés.
+-   Lignes d'une hauteur adaptée à la densité des données, généralement
+    48 à 56 px.
+-   Séparateurs horizontaux fins.
+-   Alignement cohérent des valeurs d'une même colonne.
+-   Largeurs de colonnes adaptées à leur contenu.
+-   Actions regroupées dans une colonne dédiée ou un menu contextuel.
+-   Pas de bordures verticales systématiques.
+
+### 9.2 Interactions
+
+-   Survol de ligne discret.
+-   Ligne sélectionnée visuellement identifiable.
+-   Tri indiqué clairement.
+-   Pagination cohérente.
+-   Menus d'action accessibles au clavier.
+-   Les actions essentielles ne doivent pas être cachées inutilement.
+-   Les tableaux doivent gérer proprement les états vide, chargement et
+    erreur.
+
+### 9.3 Lisibilité
+
+-   Éviter les textes trop petits.
+-   Éviter les colonnes excessivement serrées.
+-   Les informations secondaires peuvent être affichées sur une deuxième
+    ligne, avec une taille lisible.
+-   Les données importantes (nom, statut, date du dernier contrôle)
+    doivent être faciles à repérer.
+
+------------------------------------------------------------------------
+
+## 10. Badges, alertes et niveaux de gravité
+
+Les badges doivent être compacts, lisibles et cohérents.
+
+-   Fond légèrement teinté.
+-   Texte de couleur correspondante, suffisamment contrasté.
+-   Padding horizontal régulier.
+-   Taille de texte généralement 12 px.
+-   Hauteur adaptée au contenu, sans devenir trop imposante.
+-   Utiliser une pastille ou une icône uniquement si elle facilite la
+    lecture.
+
+Les niveaux de gravité doivent respecter les règles métier. Une alerte
+critique doit être immédiatement identifiable, mais ne doit pas
+transformer toute la page en zone rouge.
+
+Les alertes et notifications doivent distinguer clairement :
+
+-   Le niveau de gravité.
+-   Le titre.
+-   La ressource concernée.
+-   L'ancienneté ou l'heure.
+-   L'action attendue, si applicable.
+
+Ne pas utiliser uniquement une couleur pour distinguer les niveaux.
+
+------------------------------------------------------------------------
+
+## 11. Sidebar et navigation
+
+La navigation latérale est un élément structurant de Difence.
+
+### 11.1 Identité et structure
+
+-   Conserver l'identité bleue de Difence.
+-   Éviter un bleu trop lumineux ou trop saturé sur toute la surface.
+-   Préserver une bonne lisibilité des libellés.
+-   Organiser les rubriques avec des titres de groupe discrets.
+-   Conserver une séparation claire entre surveillance et
+    administration.
+-   Garder les informations de compte et de contexte utilisateur dans
+    une zone dédiée.
+
+### 11.2 Liens de navigation
+
+-   Icônes cohérentes en taille et en style.
+-   Hauteur de ligne homogène.
+-   Espacement vertical régulier.
+-   État actif clairement identifiable, avec un contraste suffisant.
+-   État inactif plus discret.
+-   Hover subtil.
+-   Badges de compteur réservés aux informations réellement utiles.
+-   Ne pas utiliser des fonds gris épais ou des bordures natives sur les
+    éléments de navigation.
+
+### 11.3 Navigation clavier
+
+Tous les éléments de navigation doivent être accessibles au clavier et
+présenter un focus visible.
+
+------------------------------------------------------------------------
+
+## 12. Icônes et illustrations
+
+-   Utiliser une seule famille d'icônes, de préférence Lucide si elle
+    est déjà disponible dans le projet.
+-   Privilégier les icônes outline.
+-   Utiliser des tailles cohérentes : 16 px pour les contrôles compacts,
+    18 px pour la navigation, 20 à 24 px pour les éléments importants.
+-   Ne pas mélanger des icônes outline, pleines, 3D et emoji.
+-   Ne pas utiliser d'emoji comme icônes fonctionnelles.
+-   Chaque icône doit avoir un sens compréhensible.
+-   Les boutons contenant uniquement une icône doivent disposer d'un nom
+    accessible ou d'un tooltip.
+
+------------------------------------------------------------------------
+
+## 13. Graphiques et cartographie
+
+Les visualisations doivent privilégier la lecture et l'analyse.
+
+### 13.1 Graphiques
+
+-   Palette cohérente avec les couleurs fonctionnelles.
+-   Axes, légendes et unités lisibles.
+-   Éviter les effets 3D.
+-   Éviter les dégradés décoratifs.
+-   Ne pas multiplier les couleurs sans signification.
+-   Afficher les valeurs et périodes utiles.
+-   Prévoir des états sans données et des états de chargement.
+
+### 13.2 Graphes de topologie et de règles
+
+Les graphes de nœuds (topologie réseau, flux de règles de pare-feu)
+suivent les mêmes tokens que le reste de l'interface.
+
+-   Les nœuds de classification utilisent une palette restreinte : bleu de
+    marque pour la machine locale et les passerelles, bleu d'information
+    pour les bridges, ambre pour les VLAN, surfaces neutres pour les
+    interfaces et les voisins.
+-   Le texte est blanc sur les remplissages saturés, et utilise la
+    variante `*-strong` sur les fonds teintés.
+-   Les verdicts de pare-feu reprennent les couleurs de statut : succès
+    pour `accept`, danger pour `drop` et `reject`, information pour
+    `jump`, avertissement pour `nat`, neutre pour `return`, `log` et les
+    autres verdicts.
+-   La forme des nœuds complète la couleur ; une information n'est jamais
+    portée par la couleur seule.
+-   Le fond du graphe est une surface secondaire unie, sans motif ni
+    dégradé décoratif.
+
+### 13.3 Cartographie
+
+-   La carte doit rester lisible et ne pas dominer inutilement le
+    dashboard.
+-   Les marqueurs doivent être suffisamment distincts.
+-   Les couleurs des marqueurs doivent correspondre aux statuts métier.
+-   Les infobulles doivent présenter les informations essentielles.
+-   Les contrôles cartographiques doivent être discrets et accessibles.
+-   Ne pas sacrifier la lisibilité des alertes ou des données pour des
+    effets graphiques.
+
+------------------------------------------------------------------------
+
+## 14. Animations et fluidité
+
+Les animations doivent rendre l'interface plus naturelle et clarifier
+les changements d'état.
+
+### 14.1 Durées
+
+  Interaction                      Durée indicative
+  ------------------------------ ------------------
+  Hover bouton ou lien                  120--180 ms
+  Changement de couleur / état          150--200 ms
+  Ouverture d'un menu                   150--200 ms
+  Ouverture d'une popover               150--200 ms
+  Ouverture d'une modal                 180--240 ms
+  Transition de panneau                 180--250 ms
+
+### 14.2 Animations autorisées
+
+-   Transitions de couleur, bordure et opacité.
+-   Légère translation lors de l'apparition d'un panneau.
+-   Ouverture et fermeture de menus.
+-   Feedback de chargement.
+-   Apparition discrète d'une notification.
+-   Animation d'un indicateur de progression.
+-   Transitions d'état des contrôles.
+
+### 14.3 À éviter
+
+-   Animations longues ou répétitives.
+-   Parallaxe décorative.
+-   Effets de rebond excessifs.
+-   Déplacements qui provoquent des changements de layout.
+-   Animations systématiques à chaque chargement de page.
+-   Animations qui ralentissent une tâche opérationnelle.
+
+Respecter `prefers-reduced-motion`. Les animations doivent rester
+performantes et ne pas compromettre la lisibilité.
+
+------------------------------------------------------------------------
+
+## 15. Notifications, menus, popovers et modales
+
+Tous ces composants doivent partager les mêmes règles de forme, de
+bordure, de typographie et d'élévation.
+
+### Notifications
+
+-   Position et comportement cohérents.
+-   Message court et compréhensible.
+-   Niveau de gravité explicite.
+-   Durée d'affichage adaptée à l'importance.
+-   Possibilité de fermer les notifications non bloquantes.
+-   Ne pas masquer des contrôles essentiels.
+
+### Menus et popovers
+
+-   Ouverture rapide et fluide.
+-   Alignement prévisible avec le déclencheur.
+-   Espacement interne régulier.
+-   Fermeture au clic extérieur et avec Escape lorsque pertinent.
+-   Navigation clavier fonctionnelle.
+
+### Modales
+
+-   Taille adaptée à la tâche.
+-   Titre et description explicites.
+-   Actions principales et secondaires clairement distinguées.
+-   Focus géré correctement.
+-   Fermeture cohérente.
+-   Ne pas utiliser une modal pour une information qui peut être
+    affichée directement dans la page.
+
+------------------------------------------------------------------------
+
+## 16. Responsive design
+
+L'application doit rester utilisable sur desktop, tablette et mobile.
+
+### Desktop
+
+-   Exploiter la largeur disponible sans étirer excessivement les
+    contenus.
+-   Conserver une navigation latérale stable.
+-   Utiliser des grilles adaptatives pour les KPI et panneaux.
+
+### Tablette
+
+-   Adapter les grilles.
+-   Réduire les espacements lorsque nécessaire.
+-   Préserver la lisibilité des tableaux.
+-   Permettre le repli de la sidebar.
+
+### Mobile
+
+-   Prévoir une navigation adaptée, par exemple une sidebar repliable ou
+    un menu dédié.
+-   Empiler les cartes et les KPI.
+-   Transformer les tableaux trop larges en vue adaptée ou permettre un
+    défilement horizontal maîtrisé.
+-   Conserver les actions essentielles accessibles.
+-   Éviter les textes tronqués sans possibilité de consulter leur
+    contenu.
+-   Respecter des zones tactiles suffisamment grandes.
+
+Le responsive ne doit pas être une simple réduction proportionnelle de
+la version desktop.
+
+------------------------------------------------------------------------
+
+## 17. Accessibilité
+
+Respecter les bonnes pratiques WCAG 2.2 niveau AA dans la mesure du
+possible.
+
+-   Contraste suffisant entre texte et fond.
+-   Navigation complète au clavier.
+-   Focus visible.
+-   Labels associés aux champs.
+-   Noms accessibles pour les boutons à icône.
+-   Hiérarchie de titres logique.
+-   Messages d'erreur compréhensibles.
+-   Ne jamais transmettre une information uniquement par la couleur.
+-   Respect de `prefers-reduced-motion`.
+-   Zones interactives suffisamment grandes.
+-   Utiliser les éléments HTML sémantiques appropriés.
+
+------------------------------------------------------------------------
+
+## 18. États de l'interface
+
+Chaque composant affichant des données asynchrones doit prévoir les
+états nécessaires :
+
+-   Chargement.
+-   Données disponibles.
+-   Aucun résultat.
+-   Erreur.
+-   Accès non autorisé, si applicable.
+-   Données obsolètes ou actualisation en cours, si applicable.
+
+Les états vides doivent expliquer la situation et proposer une action
+pertinente lorsque cela a du sens.
+
+Ne pas afficher de faux indicateurs de chargement ou de données fictives
+pour masquer une absence de données.
+
+------------------------------------------------------------------------
+
+## 19. Architecture et implémentation frontend
+
+Le design system doit être implémenté de façon centralisée et
+réutilisable.
+
+### 19.1 Principes
+
+-   Examiner l'architecture frontend existante avant toute modification.
+-   Réutiliser les composants existants lorsqu'ils sont adaptés.
+-   Créer ou consolider une bibliothèque de composants partagés.
+-   Centraliser les tokens de design.
+-   Éviter les valeurs visuelles codées en dur dans chaque page.
+-   Éviter les styles inline dispersés.
+-   Éviter les variantes de composants qui ne sont pas réellement
+    nécessaires.
+-   Ne pas ajouter de dépendance sans justification.
+-   Ne pas dupliquer un composant simplement pour obtenir une légère
+    différence visuelle.
+
+### 19.2 Composants communs à privilégier
+
+Selon l'architecture existante, maintenir des composants réutilisables
+pour :
+
+-   Button.
+-   IconButton.
+-   Input.
+-   Select.
+-   SearchInput.
+-   Checkbox et Radio.
+-   Badge / StatusBadge.
+-   Card / Panel.
+-   Table.
+-   Pagination.
+-   Tooltip.
+-   Dropdown / Popover.
+-   Modal / Dialog.
+-   Alert / Notification.
+-   EmptyState.
+-   LoadingState.
+-   PageHeader.
+-   SidebarNavigation.
+
+Ne pas imposer une nouvelle architecture si le projet dispose déjà d'une
+organisation pertinente. Faire évoluer l'existant progressivement.
+
+------------------------------------------------------------------------
+
+## 20. Règles de cohérence entre les pages
+
+Le design system s'applique à toutes les pages, pas uniquement au
+dashboard.
+
+Pages concernées, selon les fonctionnalités présentes :
+
+-   Vue d'ensemble.
+-   Sites surveillés.
+-   Contrôles.
+-   Alertes.
+-   Incidents.
+-   Organisations.
+-   Utilisateurs.
+-   Configuration.
+-   Journal d'audit.
+
+Un même type d'action, de champ, de badge, de tableau ou de panneau doit
+conserver le même rendu partout.
+
+Chaque page peut avoir une composition adaptée à son usage, mais ne doit
+pas introduire une nouvelle identité visuelle.
+
+------------------------------------------------------------------------
+
+## 21. Interdictions et anti-patterns
+
+Ne pas introduire les éléments suivants :
+
+-   Boutons avec apparence native du navigateur ou de Windows.
+-   Bordures grises épaisses.
+-   Ombres fortes et reliefs artificiels.
+-   Dégradés décoratifs omniprésents.
+-   Glassmorphism systématique.
+-   Accumulation de cartes imbriquées.
+-   Une carte pour chaque petit élément.
+-   Couleurs saturées sans signification fonctionnelle.
+-   Textes trop petits.
+-   Trop de graisses typographiques.
+-   Mélange de familles d'icônes.
+-   Emojis utilisés comme icônes d'interface.
+-   Animations longues ou gratuites.
+-   Composants visuellement différents pour une même fonction.
+-   Faux boutons ou contrôles sans comportement.
+-   Données fictives introduites dans l'interface de production.
+-   Modifications de règles métier sous prétexte d'amélioration
+    visuelle.
+
+Éviter particulièrement le rendu générique « dashboard généré par IA » :
+grille de cartes répétitives, mêmes icônes dans des carrés colorés,
+bordures partout et dégradés décoratifs.
+
+------------------------------------------------------------------------
+
+## 22. Processus obligatoire pour les évolutions UI
+
+Avant toute modification importante :
+
+1.  Lire ce fichier `DESIGN.md`.
+2.  Examiner les composants et styles existants.
+3.  Identifier les composants partagés concernés.
+4.  Vérifier si une règle ou un token existe déjà.
+5.  Proposer une évolution cohérente avec le design system.
+
+Pendant le développement :
+
+1.  Modifier en priorité les composants communs.
+2.  Éviter les corrections isolées qui créent des incohérences.
+3.  Conserver les comportements métier.
+4.  Vérifier les états interactifs.
+5.  Vérifier la navigation clavier et les contrastes.
+
+Après le développement :
+
+1.  Contrôler visuellement les pages impactées.
+2.  Vérifier les résolutions desktop, tablette et mobile.
+3.  Tester les états hover, focus, active, disabled et loading.
+4.  Vérifier l'absence de régression fonctionnelle.
+5.  Corriger les écarts au présent référentiel.
+6.  Mettre à jour ce document si une règle de design évolue réellement.
+
+Ne pas considérer une modification comme terminée tant que le rendu
+visuel n'a pas été vérifié.
+
+------------------------------------------------------------------------
+
+## 23. Checklist de validation
+
+Avant de livrer une évolution frontend, vérifier les points suivants :
+
+### Identité et cohérence
+
+-   [ ] La page respecte la palette et les tokens.
+-   [ ] La typographie respecte l'échelle définie.
+-   [ ] Les composants réutilisés ont le même rendu que sur les autres
+    pages.
+-   [ ] Les espacements et alignements sont cohérents.
+-   [ ] Aucun style natif inattendu n'est visible.
+
+### Composants
+
+-   [ ] Les boutons ont les bonnes variantes et les bons états.
+-   [ ] Les champs et filtres sont cohérents.
+-   [ ] Les cartes ne sont pas inutilement imbriquées.
+-   [ ] Les tableaux restent lisibles.
+-   [ ] Les badges respectent les couleurs de statut.
+-   [ ] Les menus, popovers et modales fonctionnent correctement.
+
+### Expérience utilisateur
+
+-   [ ] Les actions principales sont faciles à identifier.
+-   [ ] Les informations importantes sont visibles rapidement.
+-   [ ] Les interactions sont fluides.
+-   [ ] Les animations sont discrètes et utiles.
+-   [ ] Les états de chargement, vide et erreur sont traités.
+
+### Qualité
+
+-   [ ] Le rendu desktop est vérifié.
+-   [ ] Le rendu tablette et mobile est vérifié.
+-   [ ] Le clavier et le focus sont fonctionnels.
+-   [ ] Les contrastes sont suffisants.
+-   [ ] Aucune fonctionnalité existante n'a été supprimée.
+-   [ ] Aucune donnée fictive n'a été introduite.
+
+------------------------------------------------------------------------
+
+## 24. Règle finale
+
+**La qualité de Difence doit venir de la précision de son interface, pas
+de la quantité d'effets visuels.**
+
+Chaque choix graphique doit améliorer la compréhension, la lisibilité ou
+l'efficacité de l'utilisateur.
+
+En cas d'hésitation entre une solution spectaculaire et une solution
+sobre, choisir la solution sobre si elle répond mieux au besoin
+opérationnel.
+
+Ce document est la référence commune à toutes les évolutions de
+l'interface de Difence.

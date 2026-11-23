@@ -7,12 +7,12 @@ const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyV
 
 const graphStyle = [
   { selector: 'node', style: { label: 'data(label)', 'text-wrap': 'wrap', 'text-max-width': 170, 'font-size': 11, color: cssVar('--graph-label'), 'text-valign': 'center', 'text-halign': 'center', width: 150, height: 66, 'background-color': cssVar('--graph-node-bg'), 'border-width': 1, 'border-color': cssVar('--graph-node-border'), padding: 8 } },
-  { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), color: '#ffffff', width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
-  { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-host-border'), shape: 'round-rectangle' } },
+  { selector: 'node[kind="host"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), color: cssVar('--graph-host-fg'), width: 190, height: 90, 'font-size': 15, 'font-weight': 700, shape: 'round-rectangle' } },
+  { selector: 'node[kind="interface"]', style: { 'background-color': cssVar('--graph-interface-bg'), 'border-color': cssVar('--graph-interface-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bridge"]', style: { 'background-color': cssVar('--graph-bridge-bg'), 'border-color': cssVar('--graph-bridge-border'), shape: 'round-rectangle' } },
   { selector: 'node[kind="bond"]', style: { 'background-color': cssVar('--graph-bond-bg'), 'border-color': cssVar('--graph-bond-border'), shape: 'hexagon' } },
   { selector: 'node[kind="vlan"]', style: { 'background-color': cssVar('--graph-vlan-bg'), 'border-color': cssVar('--graph-vlan-border'), 'border-style': 'dashed', shape: 'round-rectangle' } },
-  { selector: 'node[kind="gateway"]', style: { 'background-color': cssVar('--graph-gateway-bg'), 'border-color': cssVar('--graph-gateway-border'), shape: 'diamond', width: 130, height: 90 } },
+  { selector: 'node[kind="gateway"]', style: { 'background-color': cssVar('--graph-gateway-bg'), 'border-color': cssVar('--graph-gateway-border'), color: cssVar('--graph-host-fg'), shape: 'diamond', width: 130, height: 90 } },
   { selector: 'node[kind="neighbor"]', style: { 'background-color': cssVar('--graph-neighbor-bg'), 'border-color': cssVar('--graph-neighbor-border'), shape: 'ellipse', width: 126, height: 46, 'font-size': 10 } },
   { selector: 'node[kind="neighbor"][?docker]', style: { 'border-style': 'dashed' } },
   { selector: 'edge', style: { width: 2, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', label: 'data(label)', 'font-size': 9, color: cssVar('--graph-edge-label'), 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 3 } },
@@ -153,15 +153,15 @@ let fwCy;
 
 const fwStyle = [
   { selector: 'node', style: { label: 'data(label)', 'font-size': 10, 'text-valign': 'center', 'text-halign': 'center', width: 118, height: 34, 'background-color': cssVar('--graph-node-bg'), 'border-width': 1, 'border-color': cssVar('--graph-node-border'), color: cssVar('--graph-label'), 'text-wrap': 'ellipsis', 'text-max-width': 108 } },
-  { selector: 'node[kind="hook"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), 'font-weight': 700, width: 138 } },
+  { selector: 'node[kind="hook"]', style: { 'background-color': cssVar('--graph-host-bg'), 'border-color': cssVar('--graph-host-border'), color: cssVar('--graph-host-fg'), 'font-weight': 700, width: 138 } },
   { selector: 'node[kind="verdict"]', style: { shape: 'round-rectangle', width: 92, height: 30, 'font-weight': 700 } },
-  { selector: 'node[verdict="accept"]', style: { 'background-color': '#DCFCE7', 'border-color': '#00C758', color: '#00C758' } },
-  { selector: 'node[verdict="drop"]', style: { 'background-color': '#FB2C36', 'border-color': '#FB2C36', color: '#FB2C36' } },
-  { selector: 'node[verdict="reject"]', style: { 'background-color': '#FB2C36', 'border-color': '#FB2C36', color: '#FB2C36' } },
-  { selector: 'node[verdict="jump"]', style: { 'background-color': '#3080FF', 'border-color': '#F97015', color: '#FFFFFF' } },
-  { selector: 'node[verdict="nat"]', style: { 'background-color': '#8200DA', 'border-color': '#F3E8FF', color: '#F3E8FF' } },
-  { selector: 'node[verdict="return"]', style: { 'background-color': '#874B00', 'border-color': '#EDB200', color: '#EDB200' } },
-  { selector: 'node[verdict="log"]', style: { 'background-color': '#D1D5DC', 'border-color': '#797067' } },
+  { selector: 'node[verdict="accept"]', style: { 'background-color': cssVar('--verdict-accept-bg'), 'border-color': cssVar('--verdict-accept-border'), color: cssVar('--verdict-accept-fg') } },
+  { selector: 'node[verdict="drop"]', style: { 'background-color': cssVar('--verdict-danger-bg'), 'border-color': cssVar('--verdict-danger-border'), color: cssVar('--verdict-danger-fg') } },
+  { selector: 'node[verdict="reject"]', style: { 'background-color': cssVar('--verdict-danger-bg'), 'border-color': cssVar('--verdict-danger-border'), color: cssVar('--verdict-danger-fg') } },
+  { selector: 'node[verdict="jump"]', style: { 'background-color': cssVar('--verdict-info-bg'), 'border-color': cssVar('--verdict-info-border'), color: cssVar('--verdict-info-fg') } },
+  { selector: 'node[verdict="nat"]', style: { 'background-color': cssVar('--verdict-warning-bg'), 'border-color': cssVar('--verdict-warning-border'), color: cssVar('--verdict-warning-fg') } },
+  { selector: 'node[verdict="return"]', style: { 'background-color': cssVar('--verdict-neutral-bg'), 'border-color': cssVar('--verdict-neutral-border'), color: cssVar('--verdict-neutral-fg') } },
+  { selector: 'node[verdict="log"]', style: { 'background-color': cssVar('--verdict-neutral-bg'), 'border-color': cssVar('--verdict-neutral-border'), color: cssVar('--verdict-neutral-fg') } },
   { selector: 'edge', style: { width: 1.5, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'font-size': 9, color: cssVar('--graph-edge-label'), label: 'data(label)', 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 2 } },
 ];
 
@@ -502,16 +502,33 @@ function renderChanges() {
   ].join('') || '<tr><td colspan="5" class="empty">No change.</td></tr>';
 }
 
-document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach(b => {
-    const active = b === button;
-    b.classList.toggle('active', active);
-    b.setAttribute('aria-selected', String(active));
+const tabButtons = [...document.querySelectorAll('.tab')];
+function activateTab(button, focus = false) {
+  tabButtons.forEach(item => {
+    const active = item === button;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-selected', String(active));
+    item.tabIndex = active ? 0 : -1;
   });
   document.querySelectorAll('.tab-content').forEach(panel => panel.classList.toggle('active', panel.id === `tab-${button.dataset.tab}`));
+  if (focus) button.focus();
   if (button.dataset.tab === 'overview' && cy) cy.resize();
   if (button.dataset.tab === 'firewall' && fwCy) { fwCy.resize(); fwCy.fit(undefined, 30); }
-}));
+}
+tabButtons.forEach((button, index) => {
+  button.tabIndex = button.classList.contains('active') ? 0 : -1;
+  button.addEventListener('click', () => activateTab(button));
+  button.addEventListener('keydown', event => {
+    let next;
+    if (event.key === 'ArrowRight') next = tabButtons[(index + 1) % tabButtons.length];
+    else if (event.key === 'ArrowLeft') next = tabButtons[(index - 1 + tabButtons.length) % tabButtons.length];
+    else if (event.key === 'Home') next = tabButtons[0];
+    else if (event.key === 'End') next = tabButtons[tabButtons.length - 1];
+    else return;
+    event.preventDefault();
+    activateTab(next, true);
+  });
+});
 $('interface-filter').addEventListener('input', renderInterfaces);
 $('neighbor-filter').addEventListener('input', renderNeighbors);
 $('listener-filter').addEventListener('input', renderPorts);

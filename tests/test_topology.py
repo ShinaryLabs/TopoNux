@@ -64,12 +64,12 @@ def test_on_link_default_route_is_shown_without_gateway():
 def test_neighbors_attach_to_their_interface_and_flag_docker_networks():
     snapshot = {
         "interfaces": [
-            {"ifname": "eth1", "operstate": "UP", "addr_info": [{"local": "172.21.0.10", "prefixlen": 24}]},
+            {"ifname": "eth1", "operstate": "UP", "addr_info": [{"local": "203.0.113.10", "prefixlen": 24}]},
             {"ifname": "docker0", "operstate": "UP", "addr_info": [{"local": "172.17.0.1", "prefixlen": 16}]},
         ],
         "neighbors": [
-            {"dst": "172.21.0.1", "dev": "eth1", "lladdr": "bc:24:11:61:06:15", "state": ["REACHABLE"]},
-            {"dst": "172.17.0.2", "dev": "docker0", "lladdr": "7a:e8:25:73:c4:3a", "state": ["STALE"]},
+            {"dst": "203.0.113.1", "dev": "eth1", "lladdr": "00:00:5e:00:53:01", "state": ["REACHABLE"]},
+            {"dst": "172.17.0.2", "dev": "docker0", "lladdr": "00:00:5e:00:53:02", "state": ["STALE"]},
         ],
         "routes": {},
     }
@@ -78,16 +78,16 @@ def test_neighbors_attach_to_their_interface_and_flag_docker_networks():
     nodes = {node["data"]["id"]: node["data"] for node in graph["nodes"]}
     edges = {edge["data"]["id"]: edge["data"] for edge in graph["edges"]}
 
-    lan = nodes["neighbor:eth1:bc:24:11:61:06:15"]
+    lan = nodes["neighbor:eth1:00:00:5e:00:53:01"]
     assert lan["kind"] == "neighbor"
     assert lan["family"] == "ip"
     assert lan["docker"] is False
-    assert lan["label"] == "172.21.0.1"
-    assert edges["neighbor-eth1-bc:24:11:61:06:15"]["source"] == "if:eth1"
+    assert lan["label"] == "203.0.113.1"
+    assert edges["neighbor-eth1-00:00:5e:00:53:01"]["source"] == "if:eth1"
 
-    container = nodes["neighbor:docker0:7a:e8:25:73:c4:3a"]
+    container = nodes["neighbor:docker0:00:00:5e:00:53:02"]
     assert container["docker"] is True
-    assert edges["neighbor-docker0-7a:e8:25:73:c4:3a"]["source"] == "bridge:docker0"
+    assert edges["neighbor-docker0-00:00:5e:00:53:02"]["source"] == "bridge:docker0"
 
 
 def test_neighbor_addresses_are_grouped_per_mac_and_family_is_detected():

@@ -1,22 +1,12 @@
-import ipaddress
+import os
+from typing import Annotated
 
 import typer
 import uvicorn
 
+from toponux.security import ALLOWED_HOSTS_VARIABLE, is_loopback
+
 app = typer.Typer(help="Interactive Linux network configuration viewer.")
-
-_LOOPBACK_NAMES = {"localhost", "ip6-localhost", "ip6-loopback"}
-
-
-def _is_loopback(host: str) -> bool:
-    """Return True when the listen address stays on the local machine."""
-    name = host.strip().lower()
-    if name in _LOOPBACK_NAMES:
-        return True
-    try:
-        return ipaddress.ip_address(name).is_loopback
-    except ValueError:
-        return False
 
 
 @app.callback(invoke_without_command=True)
@@ -27,15 +17,19 @@ def start(
     allow_remote: bool = typer.Option(
         False,
         "--allow-remote",
-        help="Allow a non-local listen address. Diagnostic probes become reachable from the network.",
+        help="Allow a non-local listen address. No authentication: the inventory and probes are exposed.",
     ),
+    allowed_host: Annotated[
+        list[str] | None,
+        typer.Option("--allowed-host", help="Extra DNS name accepted in the Host header. Repeatable."),
+    ] = None,
 ):
     """Start Toponux and open the web interface."""
-    loopback = _is_loopback(host)
+    loopback = is_loopback(host)
     if not loopback and not allow_remote:
         typer.echo(
-            f"Refusing to listen on {host}: the diagnostic tools would become "
-            "reachable from the network. Re-run with --allow-remote to accept this risk.",
+            f"Refusing to listen on {host}: the network inventory and diagnostic tools would become "
+            "reachable from the network without authentication. Re-run with --allow-remote to accept this risk.",
             err=True,
         )
         raise typer.Exit(code=1)
@@ -43,11 +37,19 @@ def start(
     typer.echo(f"Toponux available at {url}")
     if not loopback:
         typer.echo(
-            "Warning: listening outside loopback. Any machine that can reach "
-            "this port can launch network probes through Toponux.",
+            "Warning: listening outside loopback without authentication. Any machine that can reach "
+            "this port can read the network inventory and launch network probes through Toponux.",
             err=True,
         )
-    if not no_browser and loopback:
+    is_root = os.geteuid() == 0
+    if is_root:
+        typer.echo(
+            "Warning: running as root without authentication. Every local user can read what root sees "
+            "through this port. The browser will not be opened.",
+            err=True,
+        )
+    os.environ[ALLOWED_HOSTS_VARIABLE] = ",".join([host, *(allowed_host or [])])
+    if not no_browser and loopback and not is_root:
         import threading
         import webbrowser
 

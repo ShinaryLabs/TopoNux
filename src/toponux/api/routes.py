@@ -1,3 +1,4 @@
+import subprocess
 import threading
 import time
 from collections import defaultdict, deque
@@ -79,7 +80,18 @@ def _client_id(request: Request) -> str:
 
 
 def _enrich_snapshot(snapshot: dict) -> dict:
-    snapshot["firewall_view"] = normalize_firewall(snapshot.get("firewall"))
+    try:
+        snapshot["firewall_view"] = normalize_firewall(snapshot.get("firewall"))
+    except (AttributeError, KeyError, TypeError, ValueError):
+        message = "Firewall data has an unexpected shape."
+        snapshot.setdefault("errors", {})["firewall_view"] = message
+        snapshot["firewall_view"] = {
+            "backend": "unavailable",
+            "available": False,
+            "tables": [],
+            "totals": {},
+            "warnings": [message],
+        }
     snapshot["neighbors_view"] = normalize_neighbors(snapshot.get("neighbors"))
     snapshot["sockets_view"] = normalize_sockets(
         snapshot.get("sockets"),
@@ -133,7 +145,7 @@ def api_scan(request: Request):
     _check_scan_rate_limit(_client_id(request))
     try:
         interfaces = collect_interfaces()
-    except RuntimeError:
+    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired):
         return {
             "available": False,
             "error": "Interface information is unavailable.",

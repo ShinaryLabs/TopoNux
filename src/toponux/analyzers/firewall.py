@@ -527,7 +527,7 @@ def _finalize(tables: list[dict[str, Any]], warnings: list[str]) -> dict[str, in
                 table_counts[key] = table_counts.get(key, 0) + value
         table["chains"] = chains
         table["stats"] = {
-            "rules": table_counts["rules"],
+            "rules": sum(chain["stats"]["rules"] for chain in chains),
             "chains": len(chains),
             "by_verdict": {key: value for key, value in table_counts.items() if key != "rules" and value},
         }

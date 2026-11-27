@@ -29,7 +29,7 @@ def test_normalize_neighbors_groups_entries_and_filters_lo_veth():
 
 def test_normalize_neighbors_marks_docker_interfaces():
     entries = [
-        {"dst": "172.17.0.2", "dev": "docker0", "lladdr": "7a:e8:25:73:c4:3a", "state": ["STALE"]},
+        {"dst": "172.17.0.2", "dev": "docker0", "lladdr": "00:00:5e:00:53:02", "state": ["STALE"]},
     ]
 
     result = neighbors.normalize_neighbors(entries)

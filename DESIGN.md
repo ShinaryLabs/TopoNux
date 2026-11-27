@@ -1,15 +1,15 @@
-# DESIGN.md --- Référentiel UI/UX de Difence
+# DESIGN.md --- Référentiel UI/UX de TopoNux
 
 > **Statut :** référentiel de conception frontend\
-> **Produit :** Difence by Shinary\
-> **Type d'application :** plateforme SaaS B2B de supervision, de
-> contrôle et de cybersécurité\
-> **Langue de l'interface :** français par défaut\
+> **Produit :** TopoNux by Shinary\
+> **Type d'application :** outil local d'inspection, en lecture seule, de
+> la configuration réseau Linux\
+> **Langue de l'interface :** anglais\
 > **Priorités :** lisibilité, cohérence, efficacité opérationnelle,
 > sobriété et qualité d'exécution
 
 Ce document définit les règles visuelles et comportementales de
-l'interface de Difence. Il constitue la référence à respecter pour toute
+l'interface de TopoNux. Il constitue la référence à respecter pour toute
 création ou modification frontend.
 
 Toute évolution doit renforcer la cohérence du produit. En cas de doute,
@@ -20,10 +20,10 @@ avec les composants existants.
 
 ## 1. Vision produit et direction artistique
 
-Difence est un outil métier utilisé pour surveiller des sites, suivre
-des contrôles, traiter des alertes et gérer des incidents. L'interface
-doit inspirer confiance et permettre de comprendre rapidement une
-situation opérationnelle.
+TopoNux est un outil local qui cartographie la configuration réseau
+d'une machine Linux : interfaces, voisins, ports, routes et pare-feu. Il
+observe sans jamais modifier. L'interface doit inspirer confiance et
+permettre de comprendre rapidement l'état réseau de la machine.
 
 ### 1.1 Positionnement visuel
 
@@ -32,19 +32,19 @@ Adopter une esthétique :
 -   Professionnelle, moderne et sobre.
 -   Technique, précise et rassurante.
 -   Élégante, sans être luxueuse ou décorative.
--   Dense juste ce qu'il faut pour un outil de supervision.
--   Cohérente avec les standards des meilleurs produits SaaS B2B.
+-   Dense juste ce qu'il faut pour un outil de diagnostic.
+-   Cohérente avec les standards des meilleurs outils techniques.
 
 Références d'inspiration :
 
 -   **Linear** : sobriété, typographie, espacements et qualité des
     interactions.
 -   **Vercel** : interfaces techniques, tableaux et composants.
--   **Sentry** : alertes, incidents et informations de supervision.
+-   **Sentry** : présentation des erreurs et des avertissements.
 -   **Grafana** : visualisation et lecture de données opérationnelles.
 
 Ces références sont des sources d'inspiration, pas des modèles à
-recopier. Difence doit conserver sa propre identité.
+recopier. TopoNux doit conserver sa propre identité.
 
 ### 1.2 Principes fondamentaux
 
@@ -76,7 +76,7 @@ dur dans les composants.
   Token                    Valeur      Usage
   ------------------------ ----------- ----------------------------------
   `color-brand-900`        `#1E3A8A`   Bleu profond, éléments de marque
-  `color-brand-800`        `#1E40AF`   Sidebar et identité principale
+  `color-brand-800`        `#1E40AF`   Identité principale, machine locale
   `color-primary`          `#2563EB`   Actions principales et liens
   `color-primary-hover`    `#1D4ED8`   Survol des actions principales
   `color-primary-active`   `#1E40AF`   État actif
@@ -116,7 +116,7 @@ les badges et les libellés de statut de petite taille.
 -   Ne pas utiliser le bleu comme couleur de texte pour tous les
     contenus.
 -   Utiliser les couleurs de statut uniquement lorsqu'elles portent une
-    signification métier.
+    signification fonctionnelle.
 -   Vérifier le contraste entre texte et arrière-plan.
 -   Ne pas multiplier les couleurs d'accentuation dans une même zone.
 -   Ne pas ajouter de dégradés décoratifs sans justification
@@ -128,45 +128,27 @@ Les statuts doivent être identifiables par la couleur, le texte et,
 lorsque pertinent, une icône ou un point indicateur. Ne jamais
 communiquer une information uniquement par la couleur.
 
-  -----------------------------------------------------------------------
-  Statut                  Couleur                 Présentation
-  ----------------------- ----------------------- -----------------------
-  Opérationnel            Vert                    Fond vert pâle, texte
-                                                  vert foncé
+  Statut                          Couleur  Exemples
+  ------------------------------- -------- --------------------------------
+  Opérationnel                    Vert     Interface `UP`, pare-feu lisible
+  Avertissement / Indéterminé     Ambre    `UNKNOWN`, `DORMANT`, pare-feu
+                                           non lisible
+  Erreur                          Rouge    Échec d'une collecte ou d'un scan
+  Information                     Bleu     Navigation, sélection
+  Inactif                         Gris     Interface `DOWN`
+  Ajouté / Supprimé (Changes)     Vert / Rouge  Texte « Added » / « Removed »
 
-  Sous surveillance       Bleu                    Fond bleu pâle, texte
-                                                  bleu foncé
-
-  Avertissement / Élevée  Ambre                   Fond ambre pâle, texte
-                                                  ambre foncé
-
-  Indisponible            Ambre ou rouge selon la Fond teinté, libellé
-                          règle métier            explicite
-
-  Anomalie détectée       Rouge                   Fond rouge pâle, texte
-                                                  rouge foncé
-
-  Critique                Rouge                   Mise en évidence forte
-                                                  mais sobre
-
-  Information             Bleu                    Fond bleu pâle, texte
-                                                  bleu foncé
-
-  Inactif / Inconnu       Gris                    Fond gris pâle, texte
-                                                  gris foncé
-  -----------------------------------------------------------------------
-
-Ne pas assimiler automatiquement « indisponible », « anomalie » et «
-critique » : conserver les distinctions métier définies par
-l'application.
+Une information indisponible ne doit jamais être présentée comme une
+valeur certaine, ni comme une erreur si elle relève d'une permission
+insuffisante.
 
 ------------------------------------------------------------------------
 
 ## 3. Typographie
 
-Utiliser **Inter** en priorité, ou la police sans-serif déjà intégrée au
-projet si elle offre un rendu équivalent. Éviter de multiplier les
-familles typographiques.
+La pile de polices est définie par `--font-sans` (**Inter** si installée,
+sinon la police système) et `--font-mono` pour les valeurs techniques.
+Aucune police n'est chargée depuis le réseau.
 
 ### 3.1 Échelle typographique
 
@@ -398,7 +380,7 @@ chaque carte si elle n'apporte aucune information.
 
 ## 9. Tableaux et listes de données
 
-Les tableaux sont des composants centraux d'un outil de supervision. Ils
+Les tableaux sont des composants centraux d'un outil de diagnostic. Ils
 doivent permettre de parcourir rapidement de nombreuses lignes.
 
 ### 9.1 Structure
@@ -430,12 +412,12 @@ doivent permettre de parcourir rapidement de nombreuses lignes.
 -   Éviter les colonnes excessivement serrées.
 -   Les informations secondaires peuvent être affichées sur une deuxième
     ligne, avec une taille lisible.
--   Les données importantes (nom, statut, date du dernier contrôle)
+-   Les données importantes (nom, état, adresses)
     doivent être faciles à repérer.
 
 ------------------------------------------------------------------------
 
-## 10. Badges, alertes et niveaux de gravité
+## 10. Badges et messages
 
 Les badges doivent être compacts, lisibles et cohérents.
 
@@ -447,63 +429,49 @@ Les badges doivent être compacts, lisibles et cohérents.
 -   Utiliser une pastille ou une icône uniquement si elle facilite la
     lecture.
 
-Les niveaux de gravité doivent respecter les règles métier. Une alerte
-critique doit être immédiatement identifiable, mais ne doit pas
-transformer toute la page en zone rouge.
-
-Les alertes et notifications doivent distinguer clairement :
-
--   Le niveau de gravité.
--   Le titre.
--   La ressource concernée.
--   L'ancienneté ou l'heure.
--   L'action attendue, si applicable.
+Les messages (`notice`) expliquent ce qui est indisponible et pourquoi :
+commande absente, permission insuffisante ou erreur de lecture. Ils ne
+proposent jamais de correction automatique.
 
 Ne pas utiliser uniquement une couleur pour distinguer les niveaux.
 
 ------------------------------------------------------------------------
 
-## 11. Sidebar et navigation
+## 11. En-tête et navigation
 
-La navigation latérale est un élément structurant de Difence.
+La navigation se fait par des onglets horizontaux, sous l'en-tête et les
+KPI. Il n'y a pas de barre latérale.
 
 ### 11.1 Identité et structure
 
--   Conserver l'identité bleue de Difence.
--   Éviter un bleu trop lumineux ou trop saturé sur toute la surface.
--   Préserver une bonne lisibilité des libellés.
--   Organiser les rubriques avec des titres de groupe discrets.
--   Conserver une séparation claire entre surveillance et
-    administration.
--   Garder les informations de compte et de contexte utilisateur dans
-    une zone dédiée.
+-   L'en-tête contient le nom du produit, la mention « Read-only » et
+    l'action Refresh.
+-   Les onglets sont : Overview, Interfaces, Neighbours, Ports, Routing,
+    Firewall, Network tools, Data sources et Changes.
 
-### 11.2 Liens de navigation
+### 11.2 Onglets
 
--   Icônes cohérentes en taille et en style.
--   Hauteur de ligne homogène.
--   Espacement vertical régulier.
--   État actif clairement identifiable, avec un contraste suffisant.
--   État inactif plus discret.
--   Hover subtil.
--   Badges de compteur réservés aux informations réellement utiles.
--   Ne pas utiliser des fonds gris épais ou des bordures natives sur les
-    éléments de navigation.
+-   Hauteur homogène de 40 px.
+-   Onglet actif signalé par la couleur primaire, un soulignement et une
+    graisse plus forte.
+-   Onglet inactif plus discret, hover subtil.
+-   Ne pas utiliser de fonds gris épais ou de bordures natives.
 
 ### 11.3 Navigation clavier
 
-Tous les éléments de navigation doivent être accessibles au clavier et
-présenter un focus visible.
+Les onglets suivent le modèle `tablist` : `ArrowLeft`, `ArrowRight`,
+`Home` et `End` changent de vue. Le focus reste visible et un lien
+d'évitement mène au contenu.
 
 ------------------------------------------------------------------------
 
 ## 12. Icônes et illustrations
 
--   Utiliser une seule famille d'icônes, de préférence Lucide si elle
-    est déjà disponible dans le projet.
+-   L'interface n'utilise actuellement aucune bibliothèque d'icônes. En
+    cas d'ajout, une seule famille, servie localement.
 -   Privilégier les icônes outline.
 -   Utiliser des tailles cohérentes : 16 px pour les contrôles compacts,
-    18 px pour la navigation, 20 à 24 px pour les éléments importants.
+    18 px pour les onglets, 20 à 24 px pour les éléments importants.
 -   Ne pas mélanger des icônes outline, pleines, 3D et emoji.
 -   Ne pas utiliser d'emoji comme icônes fonctionnelles.
 -   Chaque icône doit avoir un sens compréhensible.
@@ -512,7 +480,7 @@ présenter un focus visible.
 
 ------------------------------------------------------------------------
 
-## 13. Graphiques et cartographie
+## 13. Graphiques et graphes
 
 Les visualisations doivent privilégier la lecture et l'analyse.
 
@@ -545,17 +513,6 @@ suivent les mêmes tokens que le reste de l'interface.
     portée par la couleur seule.
 -   Le fond du graphe est une surface secondaire unie, sans motif ni
     dégradé décoratif.
-
-### 13.3 Cartographie
-
--   La carte doit rester lisible et ne pas dominer inutilement le
-    dashboard.
--   Les marqueurs doivent être suffisamment distincts.
--   Les couleurs des marqueurs doivent correspondre aux statuts métier.
--   Les infobulles doivent présenter les informations essentielles.
--   Les contrôles cartographiques doivent être discrets et accessibles.
--   Ne pas sacrifier la lisibilité des alertes ou des données pour des
-    effets graphiques.
 
 ------------------------------------------------------------------------
 
@@ -592,7 +549,7 @@ les changements d'état.
 -   Effets de rebond excessifs.
 -   Déplacements qui provoquent des changements de layout.
 -   Animations systématiques à chaque chargement de page.
--   Animations qui ralentissent une tâche opérationnelle.
+-   Animations qui ralentissent un diagnostic.
 
 Respecter `prefers-reduced-motion`. Les animations doivent rester
 performantes et ne pas compromettre la lisibilité.
@@ -630,6 +587,8 @@ bordure, de typographie et d'élévation.
 -   Fermeture cohérente.
 -   Ne pas utiliser une modal pour une information qui peut être
     affichée directement dans la page.
+-   La boîte de confirmation native du navigateur est admise avant une
+    sonde étendue (scan de sous-réseau).
 
 ------------------------------------------------------------------------
 
@@ -641,7 +600,7 @@ L'application doit rester utilisable sur desktop, tablette et mobile.
 
 -   Exploiter la largeur disponible sans étirer excessivement les
     contenus.
--   Conserver une navigation latérale stable.
+-   Garder les onglets sur une ligne.
 -   Utiliser des grilles adaptatives pour les KPI et panneaux.
 
 ### Tablette
@@ -649,12 +608,10 @@ L'application doit rester utilisable sur desktop, tablette et mobile.
 -   Adapter les grilles.
 -   Réduire les espacements lorsque nécessaire.
 -   Préserver la lisibilité des tableaux.
--   Permettre le repli de la sidebar.
 
 ### Mobile
 
--   Prévoir une navigation adaptée, par exemple une sidebar repliable ou
-    un menu dédié.
+-   Garder tous les onglets accessibles.
 -   Empiler les cartes et les KPI.
 -   Transformer les tableaux trop larges en vue adaptée ou permettre un
     défilement horizontal maîtrisé.
@@ -748,7 +705,7 @@ pour :
 -   EmptyState.
 -   LoadingState.
 -   PageHeader.
--   SidebarNavigation.
+-   Tabs.
 
 Ne pas imposer une nouvelle architecture si le projet dispose déjà d'une
 organisation pertinente. Faire évoluer l'existant progressivement.
@@ -762,15 +719,15 @@ dashboard.
 
 Pages concernées, selon les fonctionnalités présentes :
 
--   Vue d'ensemble.
--   Sites surveillés.
--   Contrôles.
--   Alertes.
--   Incidents.
--   Organisations.
--   Utilisateurs.
--   Configuration.
--   Journal d'audit.
+-   Overview.
+-   Interfaces.
+-   Neighbours.
+-   Ports.
+-   Routing.
+-   Firewall.
+-   Network tools.
+-   Data sources.
+-   Changes.
 
 Un même type d'action, de champ, de badge, de tableau ou de panneau doit
 conserver le même rendu partout.
@@ -800,7 +757,7 @@ Ne pas introduire les éléments suivants :
 -   Composants visuellement différents pour une même fonction.
 -   Faux boutons ou contrôles sans comportement.
 -   Données fictives introduites dans l'interface de production.
--   Modifications de règles métier sous prétexte d'amélioration
+-   Modifications du comportement sous prétexte d'amélioration
     visuelle.
 
 Éviter particulièrement le rendu générique « dashboard généré par IA » :
@@ -823,7 +780,7 @@ Pendant le développement :
 
 1.  Modifier en priorité les composants communs.
 2.  Éviter les corrections isolées qui créent des incohérences.
-3.  Conserver les comportements métier.
+3.  Conserver les comportements existants et la lecture seule.
 4.  Vérifier les états interactifs.
 5.  Vérifier la navigation clavier et les contrastes.
 
@@ -884,15 +841,15 @@ Avant de livrer une évolution frontend, vérifier les points suivants :
 
 ## 24. Règle finale
 
-**La qualité de Difence doit venir de la précision de son interface, pas
+**La qualité de TopoNux doit venir de la précision de son interface, pas
 de la quantité d'effets visuels.**
 
 Chaque choix graphique doit améliorer la compréhension, la lisibilité ou
 l'efficacité de l'utilisateur.
 
 En cas d'hésitation entre une solution spectaculaire et une solution
-sobre, choisir la solution sobre si elle répond mieux au besoin
-opérationnel.
+sobre, choisir la solution sobre si elle répond mieux au besoin de
+diagnostic.
 
 Ce document est la référence commune à toutes les évolutions de
-l'interface de Difence.
+l'interface de TopoNux.

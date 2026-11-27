@@ -2,6 +2,18 @@
 
 Toponux is a local Linux tool that maps the network configuration in **read-only** mode.
 
+## Screenshots
+
+All screenshots show fictitious demo data (documentation address ranges).
+
+![Overview: topology graph of the local machine, interfaces, gateways and neighbours](docs/screenshots/overview.png)
+
+![Interfaces: state, IP addresses, traffic and MTU of each interface](docs/screenshots/interfaces.png)
+
+![Routing: IPv4 and IPv6 routes and policy routing rules](docs/screenshots/routing.png)
+
+![Firewall: rule flow and rules of an nftables table](docs/screenshots/firewall.png)
+
 ## Principles
 
 - No network configuration is modified.

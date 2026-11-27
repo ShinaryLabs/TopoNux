@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 import toponux.api.routes as routes
 from toponux.main import app
 
-client = TestClient(app)
+client = TestClient(app, base_url="http://127.0.0.1:8765")
 
 
 @pytest.fixture(autouse=True)
@@ -91,3 +91,55 @@ def test_tools_are_rate_limited(monkeypatch):
 
     assert blocked.status_code == 429
     assert "Retry-After" in blocked.headers
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1:8765", "localhost:8765", "[::1]:8765", "192.0.2.10"])
+def test_local_and_ip_hosts_are_accepted(host):
+    assert client.get("/", headers={"host": host}).status_code == 200
+
+
+def test_foreign_host_is_rejected():
+    assert client.get("/", headers={"host": "evil.example"}).status_code == 400
+
+
+def test_configured_host_is_accepted(monkeypatch):
+    monkeypatch.setenv("TOPONUX_ALLOWED_HOSTS", "0.0.0.0,server.example")
+
+    assert client.get("/", headers={"host": "server.example:8765"}).status_code == 200
+
+
+@pytest.mark.parametrize("origin", ["http://evil.example", "null", "http://127.0.0.1:9999"])
+def test_cross_origin_scan_is_refused(monkeypatch, origin):
+    monkeypatch.setattr(routes, "collect_interfaces", lambda: pytest.fail("scan must not start"))
+
+    assert client.post("/api/tools/scan", headers={"origin": origin}).status_code == 403
+
+
+def test_same_origin_post_is_accepted():
+    response = client.post("/api/tools/ipv6", json={"target": "::1"}, headers={"origin": "http://127.0.0.1:8765"})
+
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/api/docs", "/docs", "/redoc", "/openapi.json"])
+def test_api_documentation_is_disabled(path):
+    assert client.get(path).status_code == 404
+
+
+def test_scan_reports_unreadable_interfaces(monkeypatch):
+    def broken():
+        raise ValueError("invalid JSON")
+
+    monkeypatch.setattr(routes, "collect_interfaces", broken)
+
+    assert client.post("/api/tools/scan").json()["available"] is False
+
+
+def test_unexpected_firewall_shape_does_not_break_the_snapshot(monkeypatch):
+    monkeypatch.setattr(routes, "COLLECTORS", {"firewall": lambda: ["unexpected"]})
+
+    response = client.get("/api/snapshot")
+
+    assert response.status_code == 200
+    assert response.json()["firewall_view"]["available"] is False
+    assert "firewall_view" in response.json()["errors"]

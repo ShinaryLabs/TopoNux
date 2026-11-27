@@ -149,7 +149,7 @@
               <td><strong>Neighbour view</strong><small>Neighbours tab</small></td>
               <td>Derived from <code>ip -j neigh show</code> plus local OUI files</td>
               <td><code>mac</code>, <code>interface</code>, <code>state</code>, <code>addresses</code>, <code>vendor</code></td>
-              <td>Groups ARP/NDP entries by MAC and interface. Vendor lookup uses <code>/usr/share/ieee-data/oui.txt</code> (or equivalent) when installed; otherwise it reports <code>Unknown</code> or <code>Locally administered</code>.</td>
+              <td>Groups ARP/NDP entries by MAC and interface. Vendor lookup reads the first usable file among <code>/usr/share/ieee-data/oui.txt</code>, <code>/var/lib/ieee-data/oui.txt</code>, <code>/usr/share/misc/oui.txt</code>, <code>/usr/share/hwdata/oui.txt</code> and <code>/usr/share/nmap/nmap-mac-prefixes</code>; otherwise it reports <code>Unknown</code> or <code>Locally administered</code>.</td>
             </tr>
             <tr>
               <td><strong>IPv4 routes</strong><small>Routing tab</small></td>
@@ -203,7 +203,7 @@
               <td><strong>Subnet scan</strong><small>Overview tab</small></td>
               <td><code>ping -n -c 1 -W 1 -- &lt;ip&gt;</code></td>
               <td>Exit code, detected subnet list</td>
-              <td>Active probe: one ICMP echo per IPv4 host on the local subnets, capped at 512 hosts. It fills the kernel neighbour cache but changes no address, route or interface.</td>
+              <td>Active probe: one ICMP echo per IPv4 host on the local subnets, capped at 512 hosts, on every interface that is not down (VPN and virtual interfaces included), after confirmation. It fills the kernel neighbour cache but changes no address, route or interface.</td>
             </tr>
             <tr>
               <td><strong>Path probe</strong><small>Network tools tab</small></td>
@@ -227,7 +227,7 @@
               <td><strong>Route lookup</strong><small>Network tools tab</small></td>
               <td><code>ip route get &lt;target&gt;</code></td>
               <td>Selected local route</td>
-              <td>Read-only lookup shown with every diagnostic result.</td>
+              <td>Read-only lookup shown with ping, traceroute and TCP test results. A DNS name is first resolved with the system resolver, which may query your DNS server.</td>
             </tr>
           </tbody>
         </table>
@@ -237,7 +237,7 @@
       <ul class="sources-list">
         <li>Each subsystem has its own collector. A failing collector stores its error in <code>errors</code> and returns a safe default, so one missing permission never hides the rest.</li>
         <li>Commands run without a shell, with a fixed argument list and a 10-second timeout. No user input is ever passed to the collectors.</li>
-        <li>Data is collected only when you press <strong>Refresh</strong>, load the page, or run the subnet scan. There is no background polling and no persistence.</li>
+        <li>Data is collected only when you press <strong>Refresh</strong>, load the page, or run the subnet scan. There is no background polling. Nothing is stored unless you save a baseline: interfaces, routes, neighbours, listening sockets and connections (with process names) then stay in this browser's <code>localStorage</code> until you clear it.</li>
         <li>Nothing leaves the machine: no analytics, no external API, no CDN. Cytoscape is vendored and served locally.</li>
         <li>Collectors do not resolve hostnames and do not send packets. Only the active probes (ping, traceroute, TCP test, subnet scan) send traffic. Diagnostic probes are capped at 10 requests per minute; subnet scans are capped at 2 per minute and 512 hosts. The IPv6 inspector is purely local.</li>
       </ul>

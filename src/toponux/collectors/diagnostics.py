@@ -43,11 +43,24 @@ def route_lookup(target: str) -> dict:
     binary = shutil.which("ip")
     if not binary:
         return {"available": False, "output": "ip command not found."}
-    result = _run([binary, "route", "get", target], timeout=3)
-    return {
-        "available": result.returncode == 0,
-        "output": (result.stdout + result.stderr).strip() or "No route returned.",
-    }
+    try:
+        address = _resolve(target)
+        result = _run([binary, "route", "get", address], timeout=3)
+    except (OSError, ValueError) as exc:
+        return {"available": False, "output": f"Route lookup failed: {exc}"}
+    output = (result.stdout + result.stderr).strip() or "No route returned."
+    if address != target:
+        output = f"{target} resolved to {address}\n{output}"
+    return {"available": result.returncode == 0, "output": output}
+
+
+def _resolve(target: str) -> str:
+    """Return an IP address for *target*: ``ip route get`` does not accept names."""
+    try:
+        ipaddress.ip_address(target)
+    except ValueError:
+        return str(socket.getaddrinfo(target, None)[0][4][0])
+    return target
 
 
 def run_ping(target: str, count: int = 4) -> dict:

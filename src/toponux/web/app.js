@@ -165,15 +165,6 @@ const fwStyle = [
   { selector: 'edge', style: { width: 1.5, 'line-color': cssVar('--graph-edge'), 'target-arrow-color': cssVar('--graph-arrow'), 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'font-size': 9, color: cssVar('--graph-edge-label'), label: 'data(label)', 'text-background-color': cssVar('--graph-edge-label-bg'), 'text-background-opacity': 1, 'text-background-padding': 2 } },
 ];
 
-function formatBytes(value) {
-  if (!value) return '0 B';
-  const units = ['B', 'KiB', 'MiB', 'GiB'];
-  let size = value;
-  let unit = 0;
-  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
-  return `${unit === 0 ? Math.round(size) : size.toFixed(1)} ${units[unit]}`;
-}
-
 function verdictLabel(rule) {
   if (rule.verdict === 'jump') return `→ ${rule.target || 'chain'}`;
   if (rule.verdict === 'nat') return rule.target || 'NAT';
@@ -260,9 +251,14 @@ function renderFirewallTable(table) {
   </section>`;
 }
 
+// inet, bridge, arp and netdev tables are not tied to one IP family: show them in both views.
+function inFirewallFamily(table) {
+  return table.family === fwFamily || !['ip', 'ip6'].includes(table.family);
+}
+
 function renderFirewallTables(view) {
   const all = view.tables || [];
-  const matching = all.filter(table => table.family === fwFamily);
+  const matching = all.filter(inFirewallFamily);
   const tables = matching.length ? matching : all;
   $('firewall-tables').innerHTML = tables.map(renderFirewallTable).join('') || '<p class="empty">No firewall table available.</p>';
 }
@@ -279,7 +275,7 @@ function renderFirewallKpis(view) {
 }
 
 function renderFirewallFlow(view) {
-  const tables = (view.tables || []).filter(table => table.family === fwFamily);
+  const tables = (view.tables || []).filter(inFirewallFamily);
   const nodes = [];
   const edges = new Map();
   const seen = new Set();
@@ -403,6 +399,7 @@ function setScanState(busy, message, isError = false) {
   status.classList.toggle('error', isError);
 }
 async function scanSubnet() {
+  if (!window.confirm('Ping every host on the local IPv4 subnets, including VPN and virtual interfaces? Only scan networks you are allowed to probe.')) return;
   setScanState(true, 'Scanning local IPv4 subnets…');
   try {
     const result = await readJson(await fetch('/api/tools/scan', { method: 'POST' }));
@@ -631,7 +628,14 @@ function firewallRulesCsv(view) {
       }
     }
   }
-  return rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n');
+  return rows.map(row => row.map(csvCell).join(',')).join('\n');
+}
+
+function csvCell(value) {
+  let text = String(value);
+  // Spreadsheets execute cells starting with these characters as formulas.
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
 }
 
 $('fw-copy-command').addEventListener('click', async () => {

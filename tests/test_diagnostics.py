@@ -167,3 +167,33 @@ def test_reverse_dns_ignores_zone():
 def test_inspect_rejects_non_ipv6_or_unsafe_input(target):
     with pytest.raises(ValueError):
         inspect_ipv6(target)
+
+
+def test_route_lookup_resolves_names_before_calling_ip(monkeypatch):
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0, stdout="192.0.2.7 dev eth0", stderr="")
+
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: "/usr/sbin/ip")
+    monkeypatch.setattr(diagnostics.socket, "getaddrinfo", lambda *args: [(2, 1, 6, "", ("192.0.2.7", 0))])
+    monkeypatch.setattr(diagnostics.subprocess, "run", fake_run)
+
+    result = diagnostics.route_lookup("host.example")
+
+    assert calls[0][0] == ["/usr/sbin/ip", "route", "get", "192.0.2.7"]
+    assert calls[0][1]["timeout"] == 3
+    assert "shell" not in calls[0][1]
+    assert result["available"] is True
+    assert "resolved to 192.0.2.7" in result["output"]
+
+
+def test_route_lookup_timeout_is_not_fatal(monkeypatch):
+    def slow(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, 3)
+
+    monkeypatch.setattr(diagnostics.shutil, "which", lambda name: "/usr/sbin/ip")
+    monkeypatch.setattr(diagnostics.subprocess, "run", slow)
+
+    assert diagnostics.route_lookup("192.0.2.7")["available"] is False
